@@ -6,7 +6,7 @@ This pipeline performs an end-to-end variant calling, starting from raw fastQ fi
 
 ## Running the pipeline
 
-This pipeline requires nextflow and singularity, to make sure these modules are loaded. 
+This pipeline requires nextflow and singularity, so make sure these modules are loaded. 
 
 To run the pipeline, a typical command will looks as follows:
 
@@ -27,8 +27,9 @@ A script is included that takes a folder full of fastQ files and creates a compl
 The name of the genome assembly version to use. Allowed options are:
 
 * GRCh37 (1000Genomes reference with decoys)
-* GRCh38 (Current human genome WITHOUT alt contigs)
+* GRCh38 (Current human genome WITHOUT alt contigs, as recommended by Heng Li)
+* hg38 (Current human genome with all alt contigs, as distributed by the BROAD)
 
-Please note that both assemblies come with pre-defined calling regions, as provided by the BROAD institute. These regions were curated to exclude regions that cannot be reliably called with short read data. 
+Please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These manually were curated to exclude regions that cannot be reliably called with short read data. 
 
 
