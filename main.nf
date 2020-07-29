@@ -6,8 +6,6 @@ if (!params.samples) {
 	exit 1, "Must provide a samples file in CSV format"
 }
 
-println params.genomes[params.genome].fasta
-
 params.fasta = params.genomes[params.genome].fasta
 params.dict = params.genomes[params.genome].dict
 
@@ -90,11 +88,9 @@ process runBwa {
 
         script:
 	outfile = sampleID + "_" + libraryID + "_" + rgID + ".aligned.bam"
-	outfile_index = outfile + ".bai"
 
         """
-		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${REF}\\tCN:${center}" -t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 | samtools sort -n -m 4G -@ 4 -o $outfile -
-        	samtools index $outfile
+		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" -t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 | samtools sort -n -m 4G -@ 4 -o $outfile -
         """
 
 }
@@ -125,21 +121,19 @@ process runMD {
 
 	label 'samtools'
 
-	scratch true
-
 	input:
-	set indivID, sampleID, file(bam) from BamFM
+	set val(indivID), val(sampleID), file(bam) from BamFM
 
 	output:
 	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
 
 	script:
-	bam_md = bam.getBaseName() + ".md.bam"
-	bam_index = bam + ".bai"
+	bam_md = bam.getBaseName() + ".md.cram"
+	bam_index = bam_md + ".crai"
 
 	"""
 		samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} $bam $bam_md
-		samtools index --reference $bam_md
+		samtools index $bam_md
 	"""
 
 }
@@ -152,7 +146,7 @@ process runDeepvariant {
 	label 'deepvariant'
 
 	input:
-	set indivID, sampleID, file(bam) from BamMD
+	set indivID, sampleID, file(bam),file(bai) from BamMD
 	file(bed) from BedFile
 	file fai from faiToExamples.collect()
 	file fastagz from fastaGzToExamples.collect()
