@@ -1,4 +1,5 @@
 
+
 if (!params.genome) {
 	exit 1, "Must provide a genome assembly name!"
 }
@@ -16,6 +17,8 @@ params.fastagz = params.genomes[params.genome].fastagz
 params.gzfai = params.genomes[params.genome].gzfai
 params.gzi = params.genomes[params.genome].gzi
 
+params.dbsnp = params.genomes[params.genome].dbsnp
+
 if (!params.fasta || !params.fai || !params.dict || !params.fastagz || !params.gzfai || !params.gzi) {
 	exit 1, "Missing one or several mandatory options..."
 }
@@ -28,7 +31,7 @@ Channel
 Channel
 	.fromPath(params.bed)
 	.ifEmpty {exit 1; "Could not find a BED file"}
-	.into { BedFile; BedToMerge }
+	.into { BedFile; BedToMerge; BedCoverage }
 
 faiToExamples = Channel
     .fromPath(params.fai)
@@ -60,14 +63,13 @@ process runFastp {
 
         output:
 	set val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),file(left),file(right) into inputBwa
-	set val(indivID), val(sampleID), val(libraryID), file(json),file(html) into outputReportTrimming
+	set file(json),file(html) into outputReportTrimming
 
         script:
 	left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"
 	right = file(fastqR2).getBaseName() + ".trimmed.fastq.gz"
-	json = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
-	html = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
-
+	json = sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
+	html = sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
         """
 		fastp --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html
         """
@@ -85,10 +87,11 @@ process runBwa {
 
         output:
 	set indivID, sampleID, file(outfile) into runBWAOutput
+	val(sample_name) into SampleNames
 
         script:
 	outfile = sampleID + "_" + libraryID + "_" + rgID + ".aligned.bam"
-
+	sample_name = "${indivID}_${sampleID}"
         """
 		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" -t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 | samtools sort -n -m 4G -@ 4 -o $outfile -
         """
@@ -109,6 +112,7 @@ process runFixMate {
 
         script:
 	bam_fm = bam.getBaseName() + ".fm.bam"
+
         """
 		samtools fixmate -@ ${task.cpus} -m $bam - | samtools sort -m 4G -o $bam_fm -
         """
@@ -126,6 +130,7 @@ process runMD {
 
 	output:
 	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
+	set file(bam_md),file(bam_index) into BamMDCoverage
 
 	script:
 	bam_md = bam.getBaseName() + ".md.cram"
@@ -147,7 +152,7 @@ process runDeepvariant {
 
 	input:
 	set indivID, sampleID, file(bam),file(bai) from BamMD
-	file(bed) from BedFile
+	file(bed) from BedFile.collect()
 	file fai from faiToExamples.collect()
 	file fastagz from fastaGzToExamples.collect()
 	file gzfai from gzFaiToExamples.collect()
@@ -155,6 +160,7 @@ process runDeepvariant {
 
 	output:
 	set indivID,sampleID,file(gvcf) into DvVCF
+	file(gvcf) into MergeGVCF
 	file(vcf)
 
 	script:
@@ -177,16 +183,15 @@ process runMergeGvcf {
 
 	publishDir "${params.outdir}/DeepVariant", mode: 'copy'
 
+	scratch true 
         label 'glnexus'
 
-        scratch true
-
         input:
-	file(gvcfs) from DvVCF.collect()
-	file(bed) from BedToMerge
+	file(gvcfs) from MergeGVCF.collect()
+	file(bed) from BedToMerge.collect()
 
         output:
-	file(merged_vcf)
+	file(merged_vcf) into MergedVCF
 
         script:
 	merged_vcf = "deepvariant.merged.vcf.gz"
@@ -195,8 +200,110 @@ process runMergeGvcf {
 		/usr/local/bin/glnexus_cli \
 		--config DeepVariantWGS \
 		--bed $bed \
-		$vcfs \
-		| bcftools view - | bgzip -c > $merged_vcf
+		$gvcfs | bcftools view - | bgzip -c > $merged_vcf
  
         """
+}
+
+process annotateIDs {
+
+        label 'bcftools'
+
+        input:
+        file (vcf) from MergedVCF
+
+        output:
+	file(vcf_annotated) into VcfAnnotated
+
+        script:
+        vcf_annotated = vcf.getBaseName() + ".rsids.vcf.gz"
+
+        """
+		tabix $vcf
+                bcftools annotate -c ID -a $params.dbsnp -O z -o $vcf_annotated $vcf
+        """
+}
+
+process VcfGetSample {
+
+	label 'bcftools'
+
+	input:
+	file(vcf) from VcfAnnotated
+	val(sample_name) from SampleNames
+
+	output:
+	file(vcf_sample) into VcfSample
+
+	script:
+	vcf_sample = sample_name + ".vcf.gz"
+
+	"""
+		bcftools view -o $vcf_sample -O z -t ${task.cpus} -a -s $sample_name $vcf
+	"""
+
+}
+
+process VcfStats {
+
+	label 'bcftools'
+
+	input:
+	file(vcf) from VcfSample
+
+	output:
+	file(vcf_stats) into VcfInfo
+
+	script:
+	vcf_stats = vcf.getBaseName() + ".stats"
+
+	"""
+		bcftools stats $vcf > $vcf_stats
+	"""
+
+}
+
+process runWgsCoverage {
+
+        label 'mosdepth'
+
+        input:
+        set file(bam),file(bai) from BamMDCoverage
+	file(bed) from BedCoverage.collect()
+
+        output:
+        set file(genome_bed_coverage),file(genome_global_coverage) into Coverage
+
+        script:
+        base_name = bam.getBaseName()
+        genome_bed_coverage = base_name + ".mosdepth.region.dist.txt"
+	genome_global_coverage = base_name + ".mosdepth.global.dist.txt"
+	
+
+        """
+                mosdepth -t ${task.cpus} -n -f $params.fasta -x -Q 10 -b $bed $base_name $bam
+        """
+
+}
+
+process runMultiQC {
+
+	label 'multiqc'
+
+        publishDir "${params.outdir}/MultiQC", mode: 'copy'
+
+	input:
+	file('*') from outputReportTrimming.collect()
+	file('*') from Coverage.collect()
+	file('*') from VcfInfo.collect()
+
+	output:
+	file("multiqc_report.html")
+
+	script:
+
+	"""
+		multiqc .
+	"""
+
 }

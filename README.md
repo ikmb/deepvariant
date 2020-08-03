@@ -19,9 +19,11 @@ These options are further explained in the following:
 #### `--samples` 
 This option expects a sample sheet in CSV format that specifies information on the subject, sample, details of the library and the location of the paired-end files. 
 
-A script is included that takes a folder full of fastQ files and creates a compliant sample sheet. This script requires ruby and can be downloaded [here](https://github.com/ikmb/deepvariant/bin/samplesheet_from_folder.rb)
+A script is included that takes a folder full of fastQ files and creates a compliant sample sheet. This script requires ruby and can be downloaded [here](https://github.com/ikmb/deepvariant/blob/master/bin/samplesheet_from_folder.rb)
 
 `ruby samplesheet_from_folder.rb --folder /path/to/reads > Samples.csv`
+
+Please note that the script makes some assumptions about the naming structure of the FastQ files (typically Illumina-generated data should work - but please check manually to see if the information makes sense!).
 
 #### `--genome`
 The name of the genome assembly version to use. Allowed options are:
@@ -30,6 +32,6 @@ The name of the genome assembly version to use. Allowed options are:
 * GRCh38 (Current human genome WITHOUT alt contigs, as recommended by Heng Li)
 * hg38 (Current human genome with all alt contigs, as distributed by the BROAD)
 
-Please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These manually were curated to exclude regions that cannot be reliably called with short read data. 
+Please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These were manually curated to exclude regions that cannot be reliably called with short read data
 
 
