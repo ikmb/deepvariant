@@ -90,7 +90,7 @@ process runBwa {
 	val(sample_name) into SampleNames
 
         script:
-	outfile = indivID + "_" + sampleID + "_" + libraryID + "_" + rgID + ".aligned.bam"
+	outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.bam"
 	sample_name = "${indivID}_${sampleID}"
         """
 		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
@@ -221,8 +221,7 @@ if (params.joint_calling) {
 		val(sample_name) from SampleNames
 
 		output:
-		file(vcf_sample) into VcfSample
-		file(vcf_sample_index)
+		set  file(vcf_sample),file(vcf_sample_index) into VcfSample
 
 		script:
 		vcf_sample = sample_name + ".vcf.gz"
@@ -240,7 +239,7 @@ if (params.joint_calling) {
 		label 'glnexus'
 
 		input:
-		file(vcf) from VcfSample
+		set file(vcf),file(tbi) from VcfSample
 
 		output:
 		file(vcf_stats) into VcfInfo
