@@ -68,8 +68,8 @@ process runFastp {
         script:
 	left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"
 	right = file(fastqR2).getBaseName() + ".trimmed.fastq.gz"
-	json = sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
-	html = sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
+	json = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
+	html = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
         """
 		fastp --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html
         """
@@ -90,31 +90,13 @@ process runBwa {
 	val(sample_name) into SampleNames
 
         script:
-	outfile = sampleID + "_" + libraryID + "_" + rgID + ".aligned.bam"
+	outfile = indivID + "_" + sampleID + "_" + libraryID + "_" + rgID + ".aligned.bam"
 	sample_name = "${indivID}_${sampleID}"
         """
-		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" -t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 | samtools sort -n -m 4G -@ 4 -o $outfile -
-        """
-
-}
-
-process runFixMate {
-
-	label 'samtools'
-
-        scratch true
-
-        input:
-	set indivID, sampleID, file(bam) from runBWAOutput
-
-        output:
-	set indivID, sampleID, file(bam_fm) into BamFM
-
-        script:
-	bam_fm = bam.getBaseName() + ".fm.bam"
-
-        """
-		samtools fixmate -@ ${task.cpus} -m $bam - | samtools sort -m 4G -o $bam_fm -
+		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
+		-t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 \
+		| samtools fixmate -@ 4 -m - - \
+                | samtools sort -@ 4 -O bam -o $outfile -
         """
 
 }
@@ -126,7 +108,7 @@ process runMD {
 	label 'samtools'
 
 	input:
-	set val(indivID), val(sampleID), file(bam) from BamFM
+	set val(indivID), val(sampleID), file(bam) from runBWAOutput
 
 	output:
 	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
@@ -179,88 +161,102 @@ process runDeepvariant {
 	"""
 }
 
-process runMergeGvcf {
+if (params.joint_calling) {
 
-	publishDir "${params.outdir}/DeepVariant", mode: 'copy'
+	process runMergeGvcf {
 
-	scratch true 
-        label 'glnexus'
+		scratch true 
+        	label 'glnexus'
 
-        input:
-	file(gvcfs) from MergeGVCF.collect()
-	file(bed) from BedToMerge.collect()
+	        input:
+		file(gvcfs) from MergeGVCF.collect()
+		file(bed) from BedToMerge.collect()
 
-        output:
-	file(merged_vcf) into MergedVCF
+        	output:
+		file(merged_vcf) into MergedVCF
 
-        script:
-	merged_vcf = "deepvariant.merged.vcf.gz"
+        	script:
+		merged_vcf = "deepvariant.merged.vcf.gz"
 
-        """
-		/usr/local/bin/glnexus_cli \
-		--config DeepVariantWGS \
-		--bed $bed \
-		$gvcfs | bcftools view - | bgzip -c > $merged_vcf
+        	"""
+			/usr/local/bin/glnexus_cli \
+			--config DeepVariantWGS \
+			--bed $bed \
+			$gvcfs | bcftools view - | bgzip -c > $merged_vcf
  
-        """
-}
+	        """
+	}
 
-process annotateIDs {
+	process annotateIDs {
 
-        label 'bcftools'
+                publishDir "${params.outdir}/DeepVariant", mode: 'copy'
 
-        input:
-        file (vcf) from MergedVCF
+        	label 'glnexus'
 
-        output:
-	file(vcf_annotated) into VcfAnnotated
+	        input:
+        	file (vcf) from MergedVCF
 
-        script:
-        vcf_annotated = vcf.getBaseName() + ".rsids.vcf.gz"
+	        output:
+		file(vcf_annotated) into VcfAnnotated
+		file(vcf_annotated_index)
 
-        """
-		tabix $vcf
-                bcftools annotate -c ID -a $params.dbsnp -O z -o $vcf_annotated $vcf
-        """
-}
+	        script:
+        	vcf_annotated = vcf.getBaseName() + ".rsids.vcf.gz"
+		vcf_annotated_index = vcf_annotated + ".tbi"
+	        """
+			tabix $vcf
+                	bcftools annotate -c ID -a $params.dbsnp -O z -o $vcf_annotated $vcf
+			tabix $vcf_annotated
+	        """
+	}
 
-process VcfGetSample {
+	process VcfGetSample {
 
-	label 'bcftools'
+                publishDir "${params.outdir}/DeepVariant", mode: 'copy'
 
-	input:
-	file(vcf) from VcfAnnotated
-	val(sample_name) from SampleNames
+		label 'glnexus'
 
-	output:
-	file(vcf_sample) into VcfSample
+		input:
+		file(vcf) from VcfAnnotated
+		val(sample_name) from SampleNames
 
-	script:
-	vcf_sample = sample_name + ".vcf.gz"
+		output:
+		file(vcf_sample) into VcfSample
+		file(vcf_sample_index)
 
-	"""
-		bcftools view -o $vcf_sample -O z -t ${task.cpus} -a -s $sample_name $vcf
-	"""
+		script:
+		vcf_sample = sample_name + ".vcf.gz"
+		vcf_sample_index = vcf_sample + ".tbi"
 
-}
+		"""
+			bcftools view -o $vcf_sample -O z -t ${task.cpus} -a -s $sample_name $vcf
+			tabix $vcf_sample
+		"""
 
-process VcfStats {
+	}
 
-	label 'bcftools'
+	process VcfStats {
 
-	input:
-	file(vcf) from VcfSample
+		label 'glnexus'
 
-	output:
-	file(vcf_stats) into VcfInfo
+		input:
+		file(vcf) from VcfSample
 
-	script:
-	vcf_stats = vcf.getBaseName() + ".stats"
+		output:
+		file(vcf_stats) into VcfInfo
 
-	"""
-		bcftools stats $vcf > $vcf_stats
-	"""
+		script:
+		vcf_stats = vcf.getBaseName() + ".stats"
 
+		"""
+			bcftools stats $vcf > $vcf_stats
+		"""
+
+	}
+
+} else {
+
+	VcfInfo = Channel.empty()
 }
 
 process runWgsCoverage {
