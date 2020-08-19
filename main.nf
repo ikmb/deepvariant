@@ -19,6 +19,8 @@ params.gzi = params.genomes[params.genome].gzi
 
 params.dbsnp = params.genomes[params.genome].dbsnp
 
+params.mitochondrion = params.genomes[params.genome].mitochondrion
+
 if (!params.fasta || !params.fai || !params.dict || !params.fastagz || !params.gzfai || !params.gzi) {
 	exit 1, "Missing one or several mandatory options..."
 }
@@ -80,7 +82,7 @@ process runBwa {
 
 	label 'bwa'
 
-        scratch true
+        //scratch true
 
         input:
 	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastqR1),file(fastqR2) from inputBwa
@@ -90,13 +92,13 @@ process runBwa {
 	val(sample_name) into SampleNames
 
         script:
-	outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.bam"
+	outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
 	sample_name = "${indivID}_${sampleID}"
         """
 		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
 		-t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 \
 		| samtools fixmate -@ 4 -m - - \
-                | samtools sort -@ 4 -O bam -o $outfile -
+                | samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
         """
 
 }
@@ -107,11 +109,13 @@ process runMD {
 
 	label 'samtools'
 
+	scratch true
+
 	input:
 	set val(indivID), val(sampleID), file(bam) from runBWAOutput
 
 	output:
-	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
+	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats,BamFB)
 	set file(bam_md),file(bam_index) into BamMDCoverage
 
 	script:
@@ -125,12 +129,38 @@ process runMD {
 
 }
 
+//  ***********************
+// Run Freebayes
+// ************************
+
+process runFreebayesMT {
+
+        label 'freebayes'
+
+        publishDir "${params.outdir}/${indivID}/${sampleID}/MT", mode: 'copy'
+
+        input:
+        set indivID, sampleID, file(bam),file(bai) from BamFB
+
+        output:
+        set indivID, sampleID, file(vcf)
+
+        script:
+        vcf = indivID + "_" + sampleID + ".MT.vcf"
+
+        """
+                freebayes --ploidy 1 -f $params.fasta -r $params.mitochondrion $bam > $vcf
+        """
+}
+
 
 process runDeepvariant {
 
 	publishDir "${params.outdir}/${indivID}/${sampleID}/DeepVariant", mode: 'copy'
 
 	label 'deepvariant'
+
+	scratch true
 
 	input:
 	set indivID, sampleID, file(bam),file(bai) from BamMD
