@@ -62,6 +62,7 @@ groups.each do |group, files|
         sample = group.split("-")[0]
 
         e = `zcat #{left} | head -n1 `
+	e.gsub!("@", "")
 	header = e
 
         instrument,run_id,flowcell_id,lane,tile,x,y = header.split(" ")[0].split(":")
