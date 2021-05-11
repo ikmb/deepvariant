@@ -10,6 +10,8 @@ if (!params.samples) {
 params.fasta = params.genomes[params.genome].fasta
 params.dict = params.genomes[params.genome].dict
 
+params.mmi = params.genomes[params.genome].mmi
+
 params.bed = params.genomes[params.genome].bed
 
 params.fai = params.genomes[params.genome].fai
@@ -78,28 +80,54 @@ process runFastp {
 
 }
 
-process runBwa {
+if (params.pabio) {
 
-	label 'bwa'
+	process runMinimap {
+	
+		label 'minimap2'
 
-        //scratch true
+		input:
+		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastq) from inputMinimap
 
-        input:
-	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastqR1),file(fastqR2) from inputBwa
+		output:
+		set indivID, sampleID, file(outfile) into runBWAOutput
+                val(sample_name) into SampleNames
 
-        output:
-	set indivID, sampleID, file(outfile) into runBWAOutput
-	val(sample_name) into SampleNames
+                script:
+                outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
+                sample_name = "${indivID}_${sampleID}
 
-        script:
-	outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
-	sample_name = "${indivID}_${sampleID}"
-        """
-		bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
-		-t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 \
-		| samtools fixmate -@ 4 -m - - \
-                | samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
-        """
+		"""
+			minimap2 -ax asm20 -t ${task.cpus} ${params.mmi} $fastq | samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
+		"""
+	}
+	
+} else {
+
+	process runBwa {
+
+		label 'bwa'
+
+	        //scratch true
+
+        	input:
+		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastqR1),file(fastqR2) from inputBwa
+
+        	output:
+		set indivID, sampleID, file(outfile) into runBWAOutput
+		val(sample_name) into SampleNames
+
+	        script:
+		outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
+		sample_name = "${indivID}_${sampleID}"
+        	"""
+			bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
+			-t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 \
+			| samtools fixmate -@ 4 -m - - \
+                	| samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
+	        """
+
+	}
 
 }
 
@@ -115,7 +143,7 @@ process runMD {
 	set val(indivID), val(sampleID), file(bam) from runBWAOutput
 
 	output:
-	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats,BamFB)
+	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
 	set file(bam_md),file(bam_index) into BamMDCoverage
 
 	script:
@@ -128,31 +156,6 @@ process runMD {
 	"""
 
 }
-
-//  ***********************
-// Run Freebayes
-// ************************
-
-process runFreebayesMT {
-
-        label 'freebayes'
-
-        publishDir "${params.outdir}/${indivID}/${sampleID}/MT", mode: 'copy'
-
-        input:
-        set indivID, sampleID, file(bam),file(bai) from BamFB
-
-        output:
-        set indivID, sampleID, file(vcf)
-
-        script:
-        vcf = indivID + "_" + sampleID + ".MT.vcf"
-
-        """
-                freebayes --ploidy 1 -f $params.fasta -r $params.mitochondrion $bam > $vcf
-        """
-}
-
 
 process runDeepvariant {
 
