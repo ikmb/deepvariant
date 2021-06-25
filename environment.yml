@@ -1,0 +1,17 @@
+# You can use this file to create a conda environment for this pipeline:
+#   conda env create -f environment.yml
+name: deepvariant-1.1
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - bioconda::pbbam
+  - bioconda::bam2fastx
+  - bioconda::fastqc
+  - bioconda::fastp=0.20.1
+  - bioconda::bwa=0.7.17
+  - bioconda::samtools=1.9
+  - bioconda::multiqc=1.10
+  - bioconda::pbmm2=1.4.0
+  - bioconda::pbmarkdup=1.0.2

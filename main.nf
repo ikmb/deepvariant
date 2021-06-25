@@ -58,8 +58,6 @@ gzi = Channel
 
 process runFastp {
 
-	label 'fastp'
-
         scratch true
 
         input:
@@ -80,25 +78,46 @@ process runFastp {
 
 }
 
-if (params.pabio) {
+if (params.pacbio) {
 
-	process runMinimap {
+	BamMD = Channel.empty()
 	
-		label 'minimap2'
+	process runPbmarkdup {
 
+                input:
+		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fasta) from HiFiReads
+
+                output:
+		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fasta_md) into inputMinimap
+
+                script:
+		fasta_md = fasta.getBaseName() + "md.fasta.gz"
+
+                """
+			pbmarkdup $fasta $fasta_md
+
+                """
+
+        }
+
+	process runPbmm2 {
+	
 		input:
-		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastq) from inputMinimap
+		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fasta) from inputMinimap
 
 		output:
-		set indivID, sampleID, file(outfile) into runBWAOutput
+		set indivID, sampleID, file(outfile) into PbmmOut
                 val(sample_name) into SampleNames
+		set indivID, sampleID, file(outfile),file(outfile_bai) into BamStats
+                set file(outfile),file(outfile_bai) into BamMDCoverage
 
                 script:
                 outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
+		outfile_bai = outfile + ".bai"
                 sample_name = "${indivID}_${sampleID}
 
 		"""
-			minimap2 -ax asm20 -t ${task.cpus} ${params.mmi} $fastq | samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
+			pbmm2 align ${params.mmi} $fasta $outfile -j ${task.cpus} --preset CCS --sort --rg "@RG\\tID:${rgID}\\tSM:${sample_name}\\tLB:${libraryID}\\tPL:PACBIO\\tDS:${params.fasta}\\tCN:${center}"
 		"""
 	}
 	
@@ -106,9 +125,7 @@ if (params.pabio) {
 
 	process runBwa {
 
-		label 'bwa'
-
-	        //scratch true
+	        scratch true
 
         	input:
 		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastqR1),file(fastqR2) from inputBwa
@@ -129,31 +146,28 @@ if (params.pabio) {
 
 	}
 
-}
+	process runMD {
 
-process runMD {
+		publishDir "${params.outdir}/${indivID}/${sampleID}/", mode: 'copy'
 
-	publishDir "${params.outdir}/${indivID}/${sampleID}/", mode: 'copy'
+		scratch true
 
-	label 'samtools'
+		input:
+		set val(indivID), val(sampleID), file(bam) from runBWAOutput
 
-	scratch true
+		output:
+		set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
+		set file(bam_md),file(bam_index) into BamMDCoverage
 
-	input:
-	set val(indivID), val(sampleID), file(bam) from runBWAOutput
+		script:
+		bam_md = bam.getBaseName() + ".md.cram"
+		bam_index = bam_md + ".crai"
 
-	output:
-	set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
-	set file(bam_md),file(bam_index) into BamMDCoverage
-
-	script:
-	bam_md = bam.getBaseName() + ".md.cram"
-	bam_index = bam_md + ".crai"
-
-	"""
-		samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} $bam $bam_md
-		samtools index $bam_md
-	"""
+		"""
+			samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} $bam $bam_md
+			samtools index $bam_md
+		"""
+	}
 
 }
 
@@ -181,10 +195,16 @@ process runDeepvariant {
 	script:
 	gvcf = bam.getBaseName() + ".g.vcf.gz"
 	vcf = bam.getBaseName() + ".vcf.gz"
+	def model = ""
+	if (params.pacbio) {
+		model = "PACBIO"
+	} else {
+		model = "WGS"
+	}
 	
 	"""
 		/opt/deepvariant/bin/run_deepvariant \
-		--model_type=WGS \
+		--model_type=$model \
 		--ref=$fastagz \
 		--reads $bam \
 		--output_vcf=$vcf \
