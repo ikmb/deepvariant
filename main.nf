@@ -8,6 +8,7 @@ if (!params.samples) {
 }
 
 params.fasta = params.genomes[params.genome].fasta
+params.bwa2_index = params.genomes[params.genome].bwa2_index
 params.dict = params.genomes[params.genome].dict
 
 params.mmi = params.genomes[params.genome].mmi
@@ -56,32 +57,11 @@ gzi = Channel
     .ifEmpty{exit 1, "gzi file not found: ${params.gzi}"}
     .into {gziToExamples; gziToVariants}
 
-process runFastp {
-
-        scratch true
-
-        input:
-	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date, fastqR1, fastqR2 from inputFastp
-
-        output:
-	set val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),file(left),file(right) into inputBwa
-	set file(json),file(html) into outputReportTrimming
-
-        script:
-	left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"
-	right = file(fastqR2).getBaseName() + ".trimmed.fastq.gz"
-	json = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
-	html = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
-        """
-		fastp --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html
-        """
-
-}
-
 if (params.pacbio) {
 
 	BamMD = Channel.empty()
-	
+	outputReportTrimming = Channel.empty()
+
 	process runPbmarkdup {
 
                 input:
@@ -123,6 +103,28 @@ if (params.pacbio) {
 	
 } else {
 
+	process runFastp {
+
+        	scratch true
+
+	        input:
+        	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date, fastqR1, fastqR2 from inputFastp
+
+	        output:
+        	set val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),file(left),file(right) into inputBwa
+	        set file(json),file(html) into outputReportTrimming
+
+        	script:
+	        left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"
+        	right = file(fastqR2).getBaseName() + ".trimmed.fastq.gz"
+	        json = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
+        	html = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
+	        """
+        	        fastp --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html
+	        """
+
+	}
+
 	process runBwa {
 
 	        scratch true
@@ -138,8 +140,8 @@ if (params.pacbio) {
 		outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
 		sample_name = "${indivID}_${sampleID}"
         	"""
-			bwa mem -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
-			-t ${task.cpus} ${params.fasta} $fastqR1 $fastqR2 \
+			bwa-mem2 mem -K 1000000 -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
+			-t ${task.cpus} ${params.bwa2_index} $fastqR1 $fastqR2 \
 			| samtools fixmate -@ 4 -m - - \
                 	| samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
 	        """
