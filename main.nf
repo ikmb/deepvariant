@@ -57,120 +57,88 @@ gzi = Channel
     .ifEmpty{exit 1, "gzi file not found: ${params.gzi}"}
     .into {gziToExamples; gziToVariants}
 
-if (params.pacbio) {
+process runFastp {
 
-	BamMD = Channel.empty()
-	outputReportTrimming = Channel.empty()
+       	scratch true
 
-	process runPbmarkdup {
+        input:
+       	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date, fastqR1, fastqR2 from inputFastp
 
-                input:
-		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fasta) from HiFiReads
+        output:
+       	set val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),file(left),file(right) into inputBwa
+        set file(json),file(html) into outputReportTrimming
 
-                output:
-		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fasta_md) into inputMinimap
+       	script:
+        left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"
+       	right = file(fastqR2).getBaseName() + ".trimmed.fastq.gz"
+        json = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
+       	html = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
+        """
+       	        fastp --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html
+        """
 
-                script:
-		fasta_md = fasta.getBaseName() + "md.fasta.gz"
+}
 
+process runBwa {
+
+        scratch true
+
+       	input:
+	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastqR1),file(fastqR2) from inputBwa
+
+       	output:
+	set indivID, sampleID, file(outfile) into alignedBam
+	val(sample_name) into SampleNames
+
+        script:
+	outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
+	sample_name = "${indivID}_${sampleID}"
+       	"""
+		bwa-mem2 mem -K 1000000 -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
+		-t ${task.cpus} ${params.bwa2_index} $fastqR1 $fastqR2 \
+		| samtools fixmate -@ 4 -m - - \
+               	| samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
+        """
+
+}
+
+runBWAOutput_grouped_by_sample = alignedBam.groupTuple(by: [0,1])
+
+process merge_and_dedup {
+
+        scratch params.scratch
+
+        publishDir "${OUTDIR}/${indivID}/${sampleID}/", mode: 'copy'
+
+        input:
+        set indivID, sampleID, file(aligned_bam_list) from runBWAOutput_grouped_by_sample
+
+        output:
+        set indivID,sampleID,file(merged_bam),file(merged_bam_index) into (BamMD,BamStats)
+	set file(merged_bam),file(merged_bam_index) into BamMDCoverage
+
+        script:
+        merged_bam = indivID + "_" + sampleID + ".merged.md.cram"
+        merged_bam_index = merged_bam + ".crai"
+        sample_name = indivID + "_" + sampleID
+
+        if (aligned_bam_list.size() > 1 && aligned_bam_list.size() < 1000 ) {
                 """
-			pbmarkdup $fasta $fasta_md
-
+                        samtools merge -@ 4 tmp.bam ${aligned_bam_list.join(' ')}
+                        samtools index tmp.bam
+			samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} tmp.bam $merged_bam
+			rm tmp.bam*
+			samtools index $merged_bam
+			
                 """
-
+        } else {
+                """
+                        cp $aligned_bam_list $merged_bam
+			samtools index $aligned_bam_list
+			samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} $aligned_bam_list $merged_bam
+			samtools_index $merged_bam
+                """
         }
-
-	process runPbmm2 {
-	
-		input:
-		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fasta) from inputMinimap
-
-		output:
-		set indivID, sampleID, file(outfile) into PbmmOut
-                val(sample_name) into SampleNames
-		set indivID, sampleID, file(outfile),file(outfile_bai) into BamStats
-                set file(outfile),file(outfile_bai) into BamMDCoverage
-
-                script:
-                outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
-		outfile_bai = outfile + ".bai"
-                sample_name = "${indivID}_${sampleID}
-
-		"""
-			pbmm2 align ${params.mmi} $fasta $outfile -j ${task.cpus} --preset CCS --sort --rg "@RG\\tID:${rgID}\\tSM:${sample_name}\\tLB:${libraryID}\\tPL:PACBIO\\tDS:${params.fasta}\\tCN:${center}"
-		"""
-	}
-	
-} else {
-
-	process runFastp {
-
-        	scratch true
-
-	        input:
-        	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date, fastqR1, fastqR2 from inputFastp
-
-	        output:
-        	set val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),file(left),file(right) into inputBwa
-	        set file(json),file(html) into outputReportTrimming
-
-        	script:
-	        left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"
-        	right = file(fastqR2).getBaseName() + ".trimmed.fastq.gz"
-	        json = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.json"
-        	html = indivID + "_" + sampleID + "_" + libraryID + "-" + rgID + ".fastp.html"
-	        """
-        	        fastp --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html
-	        """
-
-	}
-
-	process runBwa {
-
-	        scratch true
-
-        	input:
-		set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastqR1),file(fastqR2) from inputBwa
-
-        	output:
-		set indivID, sampleID, file(outfile) into runBWAOutput
-		val(sample_name) into SampleNames
-
-	        script:
-		outfile = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"
-		sample_name = "${indivID}_${sampleID}"
-        	"""
-			bwa-mem2 mem -K 1000000 -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
-			-t ${task.cpus} ${params.bwa2_index} $fastqR1 $fastqR2 \
-			| samtools fixmate -@ 4 -m - - \
-                	| samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
-	        """
-
-	}
-
-	process runMD {
-
-		publishDir "${params.outdir}/${indivID}/${sampleID}/", mode: 'copy'
-
-		scratch true
-
-		input:
-		set val(indivID), val(sampleID), file(bam) from runBWAOutput
-
-		output:
-		set indivID, sampleID, file(bam_md),file(bam_index) into (BamMD,BamStats)
-		set file(bam_md),file(bam_index) into BamMDCoverage
-
-		script:
-		bam_md = bam.getBaseName() + ".md.cram"
-		bam_index = bam_md + ".crai"
-
-		"""
-			samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} $bam $bam_md
-			samtools index $bam_md
-		"""
-	}
-
 }
 
 process runDeepvariant {
