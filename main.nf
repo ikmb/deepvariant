@@ -57,9 +57,34 @@ gzi = Channel
     .ifEmpty{exit 1, "gzi file not found: ${params.gzi}"}
     .into {gziToExamples; gziToVariants}
 
-process runFastp {
+// this is not finished yet, need to create a proper yaml file
+process get_software_versions {
 
-       	scratch true
+    executor 'local'
+
+    publishDir "${params.outdir}/Summary/versions", mode: 'copy'
+
+    output:
+    file("v*.txt")
+    file(yaml_file) into software_versions_yaml
+
+    script:
+    yaml_file = "software_versions_mqc.yaml"
+
+    """
+    echo $workflow.manifest.version &> v_ikmb_deepvariant.txt
+    echo $workflow.nextflow.version &> v_nextflow.txt
+    fastp -v &> v_fastp.txt
+    echo "Deepvariant 1.2.0" &> v_deepvariant.txt
+    echo "GLNexus 1.3.1" &> v_glnexus.txt
+    samtools --version &> v_samtools.txt
+    multiqc --version &> v_multiqc.txt
+    bwa-mem2 > v_bwa.txt 2>&1 || true
+    parse_versions.pl >  $yaml_file
+    """
+}
+
+process runFastp {
 
         input:
        	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date, fastqR1, fastqR2 from inputFastp
@@ -81,8 +106,6 @@ process runFastp {
 
 process runBwa {
 
-        scratch true
-
        	input:
 	set indivID, sampleID, libraryID, rgID, platform_unit, platform, platform_model, center, run_date,file(fastqR1),file(fastqR2) from inputBwa
 
@@ -96,8 +119,8 @@ process runBwa {
        	"""
 		bwa-mem2 mem -K 1000000 -H $params.dict -M -R "@RG\\tID:${rgID}\\tPL:ILLUMINA\\tPU:${platform_unit}\\tSM:${indivID}_${sampleID}\\tLB:${libraryID}\\tDS:${params.fasta}\\tCN:${center}" \
 		-t ${task.cpus} ${params.bwa2_index} $fastqR1 $fastqR2 \
-		| samtools fixmate -@ 4 -m - - \
-               	| samtools sort -m 4G --reference $params.fasta -O CRAM -@ 4 -o $outfile -
+		| samtools fixmate -@ ${task.cpus} -m - - \
+               	| samtools sort -m 4G --reference $params.fasta -O CRAM -@ ${task.cpus} -o $outfile -
         """
 
 }
@@ -108,7 +131,7 @@ process merge_and_dedup {
 
         scratch params.scratch
 
-        publishDir "${OUTDIR}/${indivID}/${sampleID}/", mode: 'copy'
+        publishDir "${params.outdir}/${indivID}/${sampleID}/", mode: 'copy'
 
         input:
         set indivID, sampleID, file(aligned_bam_list) from runBWAOutput_grouped_by_sample
@@ -124,7 +147,7 @@ process merge_and_dedup {
 
         if (aligned_bam_list.size() > 1 && aligned_bam_list.size() < 1000 ) {
                 """
-                        samtools merge -@ 4 tmp.bam ${aligned_bam_list.join(' ')}
+                        samtools merge -@ ${task.cpus} tmp.bam ${aligned_bam_list.join(' ')}
                         samtools index tmp.bam
 			samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} tmp.bam $merged_bam
 			rm tmp.bam*
@@ -133,7 +156,6 @@ process merge_and_dedup {
                 """
         } else {
                 """
-                        cp $aligned_bam_list $merged_bam
 			samtools index $aligned_bam_list
 			samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} $aligned_bam_list $merged_bam
 			samtools_index $merged_bam
@@ -165,16 +187,10 @@ process runDeepvariant {
 	script:
 	gvcf = bam.getBaseName() + ".g.vcf.gz"
 	vcf = bam.getBaseName() + ".vcf.gz"
-	def model = ""
-	if (params.pacbio) {
-		model = "PACBIO"
-	} else {
-		model = "WGS"
-	}
 	
 	"""
 		/opt/deepvariant/bin/run_deepvariant \
-		--model_type=$model \
+		--model_type=WGS \
 		--ref=$fastagz \
 		--reads $bam \
 		--output_vcf=$vcf \
@@ -314,6 +330,7 @@ process runMultiQC {
 	file('*') from outputReportTrimming.collect()
 	file('*') from Coverage.collect()
 	file('*') from VcfInfo.collect()
+	file('*') from software_versions_yaml.collect()
 
 	output:
 	file("multiqc_report.html")
