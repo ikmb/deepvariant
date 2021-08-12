@@ -322,14 +322,12 @@ process runWgsCoverage {
 
 process runMultiQC {
 
-	label 'multiqc'
-
         publishDir "${params.outdir}/MultiQC", mode: 'copy'
 
 	input:
 	file('*') from outputReportTrimming.collect()
 	file('*') from Coverage.collect()
-	file('*') from VcfInfo.collect()
+	file('*') from VcfInfo.collect().ifEmpty(false)
 	file('*') from software_versions_yaml.collect()
 
 	output:
