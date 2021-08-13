@@ -158,7 +158,7 @@ process merge_and_dedup {
                 """
 			samtools index $aligned_bam_list
 			samtools markdup -O CRAM --reference $params.fasta -@ ${task.cpus} $aligned_bam_list $merged_bam
-			samtools_index $merged_bam
+			samtools index $merged_bam
                 """
         }
 }
