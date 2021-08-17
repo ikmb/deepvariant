@@ -182,7 +182,7 @@ process runDeepvariant {
 	output:
 	set indivID,sampleID,file(gvcf) into DvVCF
 	file(gvcf) into MergeGVCF
-	file(vcf)
+	set indivID,sampleID,file(vcf) into SampleVcf
 
 	script:
 	gvcf = bam.getBaseName() + ".g.vcf.gz"
@@ -226,7 +226,7 @@ if (params.joint_calling) {
 	        """
 	}
 
-	process annotateIDs {
+	process annotate_multi_vcf {
 
                 publishDir "${params.outdir}/DeepVariant", mode: 'copy'
 
@@ -267,13 +267,13 @@ if (params.joint_calling) {
 		vcf_sample_index = vcf_sample + ".tbi"
 
 		"""
-			bcftools view -o $vcf_sample -O z -t ${task.cpus} -a -s $sample_name $vcf
+			bcftools view -o $vcf_sample -O z -a -s $sample_name $vcf
 			tabix $vcf_sample
 		"""
 
 	}
 
-	process VcfStats {
+	process vcf_stats {
 
 		label 'glnexus'
 
@@ -294,7 +294,47 @@ if (params.joint_calling) {
 
 } else {
 
-	VcfInfo = Channel.empty()
+	process annotate_single_vcf {
+
+		publishDir "${params.outdir}/${indivID}/${sampleID}/DeepVariant", mode: 'copy'
+
+		input:
+		set indivID,sampleID,file(vcf) from SampleVcf
+
+		output:
+		set file(vcf_annotated),file(vcf_annotated_index) into VcfSingeAnnotated
+
+		script:
+                vcf_annotated = vcf.getBaseName() + ".rsids.vcf.gz"
+                vcf_annotated_index = vcf_annotated + ".tbi"
+                """
+                        tabix $vcf
+                        bcftools annotate -c ID -a $params.dbsnp -O z -o $vcf_annotated $vcf
+                        tabix $vcf_annotated
+                """
+
+
+	}
+
+
+	process vcf_single_stats {
+
+		label 'glnexus'
+
+                input:
+                set file(vcf),file(tbi) from VcfSingeAnnotated
+
+                output:
+                file(vcf_stats) into VcfInfo
+
+                script:
+                vcf_stats = vcf.getBaseName() + ".stats"
+
+                """
+                        bcftools stats $vcf > $vcf_stats
+                """
+	}
+	
 }
 
 process runWgsCoverage {
