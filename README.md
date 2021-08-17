@@ -41,6 +41,8 @@ Please note that all assemblies come with pre-defined calling regions, as provid
 ### Accuracy
 Deepvariant has been shown to be highly accurate to the Genome-in-a-Bottle benchmark sets. Using in-house produced WGS data from GIAB sample NA12878, the following concordance scores were achieved within the GIAB high confidence intervals:
 
-	RECALL		PRECISION
-INDEL	0.990528	0.995649	
-SNP	0.999513	0.999728
+
+| Variant | Recall   | Precision |
+| ------- | -------- | --------- |
+| INDEL   | 0.990528 | 0.995649  |
+| SNP     | 0.999513 | 0.999728  |
