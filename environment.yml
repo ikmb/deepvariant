@@ -12,3 +12,4 @@ dependencies:
   - bioconda::samtools
   - bioconda::multiqc=1.11
   - bioconda::bcftools
+  - bioconda::htslib

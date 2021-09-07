@@ -230,8 +230,6 @@ if (params.joint_calling) {
 
                 publishDir "${params.outdir}/DeepVariant", mode: 'copy'
 
-        	label 'glnexus'
-
 	        input:
         	file (vcf) from MergedVCF
 
