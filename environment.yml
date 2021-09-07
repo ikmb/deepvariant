@@ -6,12 +6,9 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bioconda::pbbam
-  - bioconda::bam2fastx
   - bioconda::fastqc
   - bioconda::fastp=0.20.1
   - bioconda::bwa-mem2=2.2.1
   - bioconda::samtools
   - bioconda::multiqc=1.11
-  - bioconda::pbmm2=1.4.0
-  - bioconda::pbmarkdup=1.0.2
+  - bioconda::bcftools

@@ -29,4 +29,4 @@ jobs:
       - name: Push Docker image to DockerHub (latest)
         run: |
           echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker push ikmb/seepvariant:devel
+          docker push ikmb/deepvariant:devel
