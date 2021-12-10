@@ -163,6 +163,35 @@ process merge_and_dedup {
         }
 }
 
+process runManta {
+
+	publishDir "${params.outdir}/${indivID}/${sampleID}/Manta", mode: 'copy'
+
+	label 'manta'
+
+	scratch true
+
+	input:
+	set indivID, sampleID, file(bam),file(bai) from BamManta
+
+	output:
+	set indivID, sampleID, file(vcf) into MantaVCf
+
+	script:
+	vcf = bam.getBaseName() + ".manta_diploidSV.vcf.gz"
+
+	"""
+		configManta.py --bam $bam \
+			--referenceFasta $params.fasta \
+			--runDir manta \
+			--callRegions $params.bed \
+
+		manta/runWorkflow.py -j ${task.cpus}
+
+		cp manta/results/variants/diploidSV.vcf.gz $vcf
+	"""
+}
+
 process runDeepvariant {
 
 	publishDir "${params.outdir}/${indivID}/${sampleID}/DeepVariant", mode: 'copy'
