@@ -25,8 +25,9 @@ A script is included that takes a folder full of fastQ files and creates a compl
 
 `ruby samplesheet_from_folder.rb --folder /path/to/reads --pacbio > Samples.csv`
 
-Please note that the script makes some assumptions about the naming structure of the FastQ files (please check manually to see if the information makes sense!).
+Please note that the script makes some assumptions about the naming structure of the FastQ files. For Illumina reads, the script tries to group reads by library name into patient/sample sets. For Pacbio, this is not possible - so you will have to edit the sample sheet to properly set up the grouping of multiple movies into one sample and patient. 
 
+The columns indivID and sampleID can otherwise be changed by you to better suit your needs. The indivID determines to output folder name (i.e. a patient), the sampleID should be designate a particular biological sample. 
 ### `--pacbio`
 
 Specifies that the input data are pacbio CCS reads. This triggers an alternative analysis workflow, including SV calling.
