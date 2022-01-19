@@ -24,8 +24,11 @@ process deepvariant {
         vcf = bam.getBaseName() + ".vcf.gz"
 
 	def model = "WGS"
+	def options = ""
 	if (params.pacbio) {
 		model = "PACBIO"
+	} else {
+		options = "--regions=${bed}"
 	}
         """
 		unset TMPDIR
@@ -36,7 +39,7 @@ process deepvariant {
                 --reads $bam \
                 --output_vcf=$vcf \
                 --output_gvcf=$gvcf \
-                --regions=$bed \
+                $options \
                 --num_shards=${task.cpus}
         """
 }

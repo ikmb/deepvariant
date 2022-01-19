@@ -24,6 +24,6 @@ workflow DEEPVARIANT_SHORT_READS {
 	emit:
 		gvcf = deepvariant.out[0]
 		vcf = vcf_pass.out
-
+		bam = merge_and_dedup.out
 }
 
