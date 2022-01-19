@@ -37,6 +37,13 @@ The name of the genome assembly version to use. Allowed options are:
 
 Please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These were manually curated to exclude regions that cannot be reliably called with short read data
 
+## Documentation
+
+1. [What happens in this pipeline?](docs/pipeline.md)
+2. [Installation and configuration](docs/installation.md)
+3. [Running the pipeline](docs/usage.md)
+4. [Output](docs/output.md)
+5. [Troubleshooting](docs/troubleshooting.md)
 
 ### Accuracy
 Deepvariant has been shown to be highly accurate to the Genome-in-a-Bottle benchmark sets. Using in-house produced WGS data from GIAB sample NA12878, the following concordance scores were achieved within the GIAB high confidence intervals:
