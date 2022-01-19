@@ -92,14 +92,20 @@ workflow {
 		DEEPVARIANT_PACBIO(reads,bed,tandem_repeats,fastaGz,gzFai,gzi,fai)
 		bam = DEEPVARIANT_PACBIO.out.bam
 		vcf = DEEPVARIANT_PACBIO.out.vcf
+		gvcf = DEEPVARIANT_PACBIO.out.gvcf
 	} else {
 		DEEPVARIANT_ILLUMINA(reads,bed,fastaGz,gzFai,gzi,fai)
 		bam = DEEPVARIANT_ILLUMINA.out.bam
 		vcf = DEEPVARIANT_ILLUMINA.out.vcf
+		gvcf = DEEPVARIANT_ILLUMINA.out.gvcf
 	}
 
 	if (params.vep) {
 		vep(vcf)
+	}
+
+	if (params.joint_calling) {
+
 	}
 
 	wgs_coverage(bam,bed)
