@@ -30,6 +30,6 @@ workflow DEEPVARIANT_PACBIO {
 	emit:
 		bam = merge_bam_files.out[0]
 		gvcf = deepvariant.out[0]
-		vcf = vcf_add_dbsnp.out
+		vcf = vcf_add_dbsnp.out.mix(vcf_get_sample.out)
 
 }

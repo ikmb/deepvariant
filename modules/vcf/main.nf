@@ -44,23 +44,23 @@ process vcf_add_dbsnp {
 
 process vcf_get_sample {
 
-	publishDir "${params.outdir}/${folder}", mode: 'copy'
+	publishDir "${params.outdir}/${indivID}/${sampleID}/${folder}", mode: 'copy'
 
 	label 'glnexus'
 
 	input:
-	tuple val(sample_name),path(vcf),path(tbi)
+	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
 	val(folder)
 
 	output:
-	tuple path(vcf_sample),path(vcf_sample_index)
+	tuple val(indivID),val(sampleID),path(vcf_sample),path(vcf_sample_index)
 
 	script:
-	vcf_sample = sample_name + ".vcf.gz"
+	vcf_sample = vcf.getSimpleName() + "." + sampleID  + ".vcf.gz"
 	vcf_sample_index = vcf_sample + ".tbi"
 
 	"""
-		bcftools view -o $vcf_sample -O z -a -s $sample_name $vcf
+		bcftools view -o $vcf_sample -O z -a -s $sampleID $vcf
 		tabix $vcf_sample
 	"""
 

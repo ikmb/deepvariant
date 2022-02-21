@@ -17,7 +17,7 @@ process deepvariant {
         output:
         tuple val(indivID),val(sampleID),path(gvcf)
         tuple val(indivID),val(sampleID),path(vcf)
-	val(sampleID)
+	tuple val(indivID),val(sampleID)
 
         script:
         gvcf = bam.getBaseName() + ".g.vcf.gz"
