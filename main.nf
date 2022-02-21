@@ -54,7 +54,7 @@ if (params.pacbio) {
 
 	Channel.fromPath(params.samples)
 		.splitCsv(sep: ';', header: true)
-		.map{ row-> tuple( row.IndivID,row.SampleID,row.libraryID,row.rgID,row.platform_unit,row.platform,row.platform_model,row.center,row.run_date,file(row.R1),file(row.R1)  ) }
+		.map{ row-> tuple( row.IndivID,row.SampleID,row.libraryID,row.rgID,row.platform_unit,row.platform,row.platform_model,row.center,row.run_date,file(row.R1),file(row.R2)  ) }
 		.set { reads }
 }
 
@@ -102,10 +102,10 @@ workflow {
 		vcf = DEEPVARIANT_PACBIO.out.vcf
 		gvcf = DEEPVARIANT_PACBIO.out.gvcf
 	} else {
-		DEEPVARIANT_ILLUMINA(reads,bed,fastaGz,gzFai,gzi,fai)
-		bam = DEEPVARIANT_ILLUMINA.out.bam
-		vcf = DEEPVARIANT_ILLUMINA.out.vcf
-		gvcf = DEEPVARIANT_ILLUMINA.out.gvcf
+		DEEPVARIANT_SHORT_READS(reads,bed,fastaGz,gzFai,gzi,fai)
+		bam = DEEPVARIANT_SHORT_READS.out.bam
+		vcf = DEEPVARIANT_SHORT_READS.out.vcf
+		gvcf = DEEPVARIANT_SHORT_READS.out.gvcf
 	}
 
 	// effect prediction

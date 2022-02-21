@@ -6,8 +6,8 @@ process merge_and_dedup {
         tuple val(indivID), val(sampleID), path(aligned_bam_list)
 
         output:
-        tuple val(indivID),val(sampleID),path(merged_bam),path(merged_bam_index)
-        tuple path(merged_bam),path(merged_bam_index)
+        tuple val(indivID),val(sampleID),path(merged_bam),path(merged_bam_index), emit: bam
+        tuple path(merged_bam),path(merged_bam_index), emit: bam_simple
 
         script:
         merged_bam = indivID + "_" + sampleID + ".merged.md.cram"

@@ -2,7 +2,7 @@ include { trim } from "./../../modules/fastp/main.nf" params(params)
 include { align } from "./../../modules/bwa/main.nf" params(params)
 include { merge_and_dedup } from "./../../modules/samtools/main.nf" params(params)
 include { deepvariant } from "./../../modules/deepvariant/main.nf" params(params)
-include { vcf_index ; vcf_pass } from "./../../modules/vcf/main.nf" params(params)
+include { vcf_add_dbsnp; vcf_index ; vcf_pass } from "./../../modules/vcf/main.nf" params(params)
 include { manta } from "./../../modules/sv/main.nf" params(params)
 include { bed_compress_and_index } from "./../../modules/htslib/main.nf" params(params)
 
@@ -29,6 +29,6 @@ workflow DEEPVARIANT_SHORT_READS {
 	emit:
 		gvcf = deepvariant.out[0]
 		vcf = vcf_add_dbsnp.out.mix(manta.out[0],manta.out[1],manta.out[2])
-		bam = merge_and_dedup.out
+		bam = merge_and_dedup.out.bam
 }
 
