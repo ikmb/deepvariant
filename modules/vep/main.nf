@@ -5,7 +5,7 @@ process vep {
 	publishDir "${params.outdir}/VEP", mode: 'copy'
 
 	input:
-	tuple path(vcf),path(tbi)
+	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
 
 	output:
 	path(vcf_annotated)
@@ -18,7 +18,7 @@ process vep {
                 --cache \
                 --dir ${params.vep_cache_dir} \
                 --species homo_sapiens \
-                --assembly $params.vep_assembly \
+                --assembly $params.genome \
                 -i $vcf \
                 --format vcf \
                 -o $vcf_annotated --dir_plugins ${params.vep_plugin_dir} \
@@ -26,10 +26,9 @@ process vep {
                 --plugin dbscSNV,${params.dbscsnv_db} \
                 --plugin CADD,${params.cadd_snps},${params.cadd_indels} \
                 --plugin ExACpLI \
-                --plugin UTRannotator \
 		--plugin Mastermind,${params.vep_mastermind}\
                 --plugin SpliceAI,${params.spliceai_fields} \
-                --fasta $params.ref \
+                --fasta $params.fasta \
                 --fork ${task.cpus} \
                 --vcf \
                 --per_gene \

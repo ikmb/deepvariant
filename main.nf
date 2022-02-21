@@ -26,6 +26,11 @@ params.mitochondrion = params.genomes[params.genome].mitochondrion
 
 params.tandem_repeats = params.genomes[params.genome].tandem_repeats
 
+params.cnv_annotation = file(params.genomes[ params.genome ].cnv_annotation )
+params.cnv_mappable = file(params.genomes[ params.genome ].cnv_mappable)
+params.cnv_blacklist = file(params.genomes[ params.genome ].cnv_blacklist )
+params.cnv_exclusion = file(params.genomes[ params.genome ].cnv_exclusion )
+
 if (!params.fasta || !params.fai || !params.dict || !params.fastagz || !params.gzfai || !params.gzi) {
 	exit 1, "Missing one or several mandatory options..."
 }
@@ -53,9 +58,12 @@ if (params.pacbio) {
 		.set { reads }
 }
 
+bed = Channel.fromPath(params.bed)
+
 // Import workflows
 include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_illumina/main.nf" params(params)
 include { DEEPVARIANT_PACBIO } from "./workflows/deepvariant_pacbio/main.nf" params(params)
+include { CNVKIT } from "./workflows/cnvkit/main.nf" params(params)
 include { multiqc ; wgs_coverage } from "./modules/qc/main.nf" params(params)
 include { vcf_stats } from "./modules/vcf/main.nf" params(params)
 include { vep } from "./modules/vep/main.nf" params(params)
@@ -100,17 +108,14 @@ workflow {
 		gvcf = DEEPVARIANT_ILLUMINA.out.gvcf
 	}
 
+	// effect prediction
 	if (params.vep) {
 		vep(vcf)
 	}
 
-	if (params.joint_calling) {
-
-	}
-
 	wgs_coverage(bam,bed)
-	vcf_stats(vcf)
+	//vcf_stats(vcf)
 
-	multiqc(wgs_coverage.out.concat(vcf_stats.out).collect())
+	multiqc(wgs_coverage.out)
 
 }
