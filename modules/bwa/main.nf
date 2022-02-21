@@ -4,8 +4,8 @@ process align {
         tuple val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),path(fastqR1),path(fastqR2)
 
         output:
-        tuple val(indivID), val(sampleID), file(bam)
-        val(sample_name)
+        tuple val(indivID), val(sampleID), file(bam), emit: bam
+        val(sample_name), emit: sname
 
         script:
         bam = indivID + "_" + sampleID + "." + libraryID + "_" + rgID + ".aligned.cram"

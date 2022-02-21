@@ -19,8 +19,8 @@ workflow DEEPVARIANT_SHORT_READS {
 	main:
 		trim(reads)
 		align(trim.out[0])
-		merge_and_dedup(align.out[0])
-		deepvariant(merge_and_dedup.out[0],bed.collect(),fastaGz.collect(),gzFai.collect(),gzi.collect(),fai.collect())
+		merge_and_dedup(align.out.bam)
+		deepvariant(merge_and_dedup.out.bam,bed.collect(),fastaGz.collect(),gzFai.collect(),gzi.collect(),fai.collect())
 		vcf_index(deepvariant.out[1])
 		vcf_pass(vcf_index.out)
 		vcf_add_dbsnp(vcf_pass.out)
