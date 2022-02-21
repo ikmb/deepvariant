@@ -21,6 +21,8 @@ process wgs_coverage {
 
 process multiqc {
 
+        label 'multiqc'
+
         publishDir "${params.outdir}/MultiQC", mode: 'copy'
 
         input:
