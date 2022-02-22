@@ -47,7 +47,7 @@ process manta {
 
 	input:
 	tuple val(indivID),val(sampleID),path(bam),path(bai)
-	path(bed)
+	tuple path(bed_gz), path(bed_gz_tbi)
 
 	output:
 	tuple val(indivID),val(sampleID),path(sv),file(sv_tbi)
@@ -64,7 +64,7 @@ process manta {
         sv_can_tbi = sv_can + ".tbi"
         
 	"""
-        	configManta.py --bam $bam --referenceFasta ${FASTA} --runDir manta --callRegions $bed_gz --exome
+        	configManta.py --bam $bam --referenceFasta ${params.fasta} --runDir manta --callRegions $bed_gz --exome
 
                 manta/runWorkflow.py -j ${task.cpus}
 
