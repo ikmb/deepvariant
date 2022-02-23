@@ -31,7 +31,7 @@ process deepvariant {
 		options = "--regions=${bed}"
 	}
         """
-		unset TMPDIR
+		set TMPDIR=\$PWD
 
                 /opt/deepvariant/bin/run_deepvariant \
                 --model_type=${model} \
@@ -40,7 +40,9 @@ process deepvariant {
                 --output_vcf=$vcf \
                 --output_gvcf=$gvcf \
                 $options \
-                --num_shards=${task.cpus}
+                --num_shards=${task.cpus} \
+		--intermediate_results_dir tmp_data
+
         """
 }
 
