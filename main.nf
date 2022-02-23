@@ -113,9 +113,9 @@ workflow {
 		vep(vcf)
 	}
 
-	wgs_coverage(bam,bed)
-	//vcf_stats(vcf)
+	wgs_coverage(bam,bed.collect())
+	vcf_stats(vcf)
 
-	multiqc(wgs_coverage.out)
+	multiqc(wgs_coverage.out.mix(vcf_stats.out).collect())
 
 }
