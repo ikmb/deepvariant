@@ -101,11 +101,13 @@ workflow {
 		bam = DEEPVARIANT_PACBIO.out.bam
 		vcf = DEEPVARIANT_PACBIO.out.vcf
 		gvcf = DEEPVARIANT_PACBIO.out.gvcf
+		vcf_dv = DEEPVARIANT_PACBIO.out.vcf_dv
 	} else {
 		DEEPVARIANT_SHORT_READS(reads,bed,fastaGz,gzFai,gzi,fai)
 		bam = DEEPVARIANT_SHORT_READS.out.bam
 		vcf = DEEPVARIANT_SHORT_READS.out.vcf
 		gvcf = DEEPVARIANT_SHORT_READS.out.gvcf
+		vcf_dv = DEEPVARIANT_SHORT_READS.out.vcf_dv
 	}
 
 	// effect prediction
@@ -114,7 +116,7 @@ workflow {
 	}
 
 	wgs_coverage(bam,bed.collect())
-	vcf_stats(vcf)
+	vcf_stats(vcf_dv)
 
 	multiqc(wgs_coverage.out.mix(vcf_stats.out).collect())
 
