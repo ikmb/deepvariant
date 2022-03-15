@@ -114,8 +114,9 @@ workflow {
 	}
 
 	wgs_coverage(bam,bed.collect())
+	picard_wgs_metrics(bam,bed.collect())
 	vcf_stats(vcf)
 
-	multiqc(wgs_coverage.out.mix(vcf_stats.out).collect())
+	multiqc(wgs_coverage.out.mix(vcf_stats.out,picard_wgs_metrics.out).collect())
 
 }

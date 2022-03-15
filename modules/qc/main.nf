@@ -19,6 +19,28 @@ process wgs_coverage {
         """
 }
 
+process picard_wgs_metrics {
+
+	label 'picard'
+
+	input:
+	tuple val(indivID),val(sampleID),path(bam),path(bai)
+        path(bed)
+
+	output:
+	path(picard_stats)
+
+	script:
+	base_name = bam.getBaseName()
+	picard_stats = base_name + "_wgs_metrics.txt"
+	intervals = bed.getBaseName() + ".interval_list"
+
+	"""
+		picard BedToIntervalList I=$bed O=$intervals SD=${params.dict}
+		picard CollectWgsMetrics I=bam REFERENCE_SEQUENCE=${params.fasta} O=$picard_stats INTERVALS=$intervals
+	"""
+}
+
 process multiqc {
 
         label 'multiqc'
