@@ -56,6 +56,7 @@ process multiqc {
         script:
 
         """
+		cp $baseDir/conf/multiqc_config.yaml multiqc_config.yaml
                 multiqc .
         """
 }

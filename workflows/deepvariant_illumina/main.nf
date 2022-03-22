@@ -19,7 +19,9 @@ workflow DEEPVARIANT_SHORT_READS {
 	main:
 		trim(reads)
 		align(trim.out[0])
-		merge_and_dedup(align.out.bam.groupTuple(by: [0,1])
+		merge_and_dedup(
+			align.out.bam.groupTuple(by: [0,1])
+		)
 		deepvariant(merge_and_dedup.out.bam,bed.collect(),fastaGz.collect(),gzFai.collect(),gzi.collect(),fai.collect())
 		vcf_index(deepvariant.out[1])
 		vcf_pass(vcf_index.out)
@@ -30,5 +32,6 @@ workflow DEEPVARIANT_SHORT_READS {
 		gvcf = deepvariant.out[0]
 		vcf = vcf_add_dbsnp.out.mix(manta.out[0],manta.out[1],manta.out[2])
 		bam = merge_and_dedup.out.bam
+		vcf_dv = vcf_add_dbsnp.out.vcf
 }
 
