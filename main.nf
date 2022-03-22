@@ -64,7 +64,7 @@ bed = Channel.fromPath(params.bed)
 include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_illumina/main.nf" params(params)
 include { DEEPVARIANT_PACBIO } from "./workflows/deepvariant_pacbio/main.nf" params(params)
 include { CNVKIT } from "./workflows/cnvkit/main.nf" params(params)
-include { multiqc ; wgs_coverage } from "./modules/qc/main.nf" params(params)
+include { multiqc ; wgs_coverage ; picard_wgs_metrics } from "./modules/qc/main.nf" params(params)
 include { vcf_stats } from "./modules/vcf/main.nf" params(params)
 include { vep } from "./modules/vep/main.nf" params(params)
 
