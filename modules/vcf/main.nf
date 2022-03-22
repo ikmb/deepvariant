@@ -30,7 +30,7 @@ process vcf_add_dbsnp {
 	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf_annotated),path(vcf_annotated_index)
+	tuple val(indivID),val(sampleID),path(vcf_annotated),path(vcf_annotated_index), emit: vcf
 
 	script:
 	vcf_annotated = vcf.getBaseName() + ".rsids.vcf.gz"
