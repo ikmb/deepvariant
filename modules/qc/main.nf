@@ -37,7 +37,7 @@ process picard_wgs_metrics {
 
 	"""
 		picard BedToIntervalList I=$bed O=$intervals SD=${params.dict}
-		picard CollectWgsMetrics I=bam REFERENCE_SEQUENCE=${params.fasta} O=$picard_stats INTERVALS=$intervals
+		picard CollectWgsMetrics I=$bam REFERENCE_SEQUENCE=${params.fasta} O=$picard_stats INTERVALS=$intervals
 	"""
 }
 
