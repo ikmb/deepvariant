@@ -1,4 +1,4 @@
-process merge_and_dedup {
+process SAMTOOLS_MERGE_AND_DEDUP {
 
         publishDir "${params.outdir}/${indivID}/${sampleID}/Align", mode: 'copy'
 
@@ -32,7 +32,7 @@ process merge_and_dedup {
         }
 }
 
-process merge_bam_files {
+process SAMTOOLS_MERGE_BAM {
 
 	publishDir "${params.outdir}/${indivID}/${sampleID}/Align", mode: 'copy'
 
@@ -40,7 +40,7 @@ process merge_bam_files {
         tuple val(indivID), val(sampleID), path(bams),path(bais)
 
         output:
-        tuple val(indivID),val(sampleID),path(merged_bam),path(merged_bam_index)
+        tuple val(indivID),val(sampleID),path(merged_bam),path(merged_bam_index), emit: bam
 	tuple path(merged_bam),path(merged_bam_index)
 
         script:

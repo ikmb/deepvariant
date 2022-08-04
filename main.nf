@@ -13,7 +13,7 @@ params.dict = params.genomes[params.genome].dict
 
 params.mmi = params.genomes[params.genome].mmi
 
-params.bed = params.genomes[params.genome].bed
+params.bed = params.intervals ?: params.genomes[params.genome].bed
 
 params.fai = params.genomes[params.genome].fai
 params.fastagz = params.genomes[params.genome].fastagz
@@ -61,12 +61,12 @@ if (params.pacbio) {
 bed = Channel.fromPath(params.bed)
 
 // Import workflows
-include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_illumina/main.nf" params(params)
-include { DEEPVARIANT_PACBIO } from "./workflows/deepvariant_pacbio/main.nf" params(params)
-include { CNVKIT } from "./workflows/cnvkit/main.nf" params(params)
-include { multiqc ; wgs_coverage ; picard_wgs_metrics } from "./modules/qc/main.nf" params(params)
-include { vcf_stats } from "./modules/vcf/main.nf" params(params)
-include { vep } from "./modules/vep/main.nf" params(params)
+include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_illumina/main.nf"
+include { DEEPVARIANT_PACBIO } from "./workflows/deepvariant_pacbio/main.nf"
+include { CNVKIT } from "./workflows/cnvkit/main.nf" 
+include { MULTIQC ; MOSDEPTH ; PICARD_WGS_METRICS  } from "./modules/qc/main.nf"
+include { VCF_STATS } from "./modules/vcf/main.nf"
+include { VEP } from "./modules/vep/main.nf"
 
 // Initialize channels
 Channel
@@ -112,13 +112,17 @@ workflow {
 
 	// effect prediction
 	if (params.vep) {
-		vep(vcf)
+		VEP(vcf)
 	}
 
-	wgs_coverage(bam,bed.collect())
-	picard_wgs_metrics(bam,bed.collect())
-	vcf_stats(vcf)
+	MOSDEPTH(bam,bed.collect())
+	PICARD_WGS_METRICS(bam,bed.collect())
+	VCF_STATS(vcf)
 
-	multiqc(wgs_coverage.out.mix(vcf_stats.out,picard_wgs_metrics.out).collect())
+	MULTIQC(
+		MOSDEPTH.out.mix(
+			VCF_STATS.out.stats,PICARD_WGS_METRICS.out
+		).collect()
+	)
 
 }

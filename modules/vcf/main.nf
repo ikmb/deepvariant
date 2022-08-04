@@ -1,4 +1,4 @@
-process glnexus {
+process GLNEXUS {
 
 	scratch true
 	label 'glnexus'
@@ -8,7 +8,7 @@ process glnexus {
 	path(bed)
 
 	output:
-	path(merged_vcf)
+	path(merged_vcf), emit: vcf
 
 	script:
 	 merged_vcf = "deepvariant.merged.vcf.gz"
@@ -22,7 +22,7 @@ process glnexus {
 	"""
 }
 
-process vcf_add_dbsnp {
+process VCF_ADD_DBSNP {
 
 	publishDir "${params.outdir}/${indivID}/${sampleID}/Variants", mode: 'copy'
 
@@ -42,7 +42,7 @@ process vcf_add_dbsnp {
 	"""
 }
 
-process vcf_get_sample {
+process VCF_GET_SAMPLE {
 
 	publishDir "${params.outdir}/${indivID}/${sampleID}/${folder}", mode: 'copy'
 
@@ -53,7 +53,7 @@ process vcf_get_sample {
 	val(folder)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf_sample),path(vcf_sample_index)
+	tuple val(indivID),val(sampleID),path(vcf_sample),path(vcf_sample_index), emit: vcf
 
 	script:
 	vcf_sample = vcf.getSimpleName() + "." + sampleID  + ".vcf.gz"
@@ -66,7 +66,7 @@ process vcf_get_sample {
 
 }
 
-process vcf_stats {
+process VCF_STATS {
 
 	label 'glnexus'
 
@@ -74,7 +74,7 @@ process vcf_stats {
 	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
 
 	output:
-	path(vcf_stats)
+	path(vcf_stats), emit: stats
 
 	script:
 	vcf_stats = vcf.getBaseName() + ".stats"
@@ -85,13 +85,13 @@ process vcf_stats {
 
 }
 	
-process vcf_index {
+process VCF_INDEX {
 	
 	input:
 	tuple val(indivID),val(sampleID),path(vcf)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
+	tuple val(indivID),val(sampleID),path(vcf),path(tbi), emit: vcf
 
 	script:
 	tbi = vcf + ".tbi"
@@ -102,14 +102,14 @@ process vcf_index {
 
 }
 
-process vcf_pass {
+process VCF_PASS {
 
 	publishDir "${params.outdir}/${indivID}/${sampleID}/Variants", mode: 'copy'
 	input:
 	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf_f),path(tbi_f)
+	tuple val(indivID),val(sampleID),path(vcf_f),path(tbi_f), emit: vcf
 
 	script:
 	vcf_f = vcf.getSimpleName() + ".pass.vcf.gz"

@@ -1,4 +1,4 @@
-process trim {
+process FASTP {
 
 	label 'fastp'
 
@@ -6,8 +6,8 @@ process trim {
         tuple val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date), path(fastqR1), path(fastqR2)
 
         output:
-        tuple val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),file(left),file(right)
-        tuple path(json),path(html)
+        tuple val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),file(left),file(right), emit: reads
+        tuple path(json),path(html), emit: qc
 
         script:
         left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"

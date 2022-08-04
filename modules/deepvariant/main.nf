@@ -1,4 +1,4 @@
-process deepvariant {
+process DEEPVARIANT {
 
         publishDir "${params.outdir}/${indivID}/${sampleID}/DeepVariant", mode: 'copy'
 
@@ -15,9 +15,9 @@ process deepvariant {
 	path(fai)
 
         output:
-        tuple val(indivID),val(sampleID),path(gvcf)
-        tuple val(indivID),val(sampleID),path(vcf)
-	tuple val(indivID),val(sampleID)
+        tuple val(indivID),val(sampleID),path(gvcf), emit: gvcf
+        tuple val(indivID),val(sampleID),path(vcf), emit: vcf
+	tuple val(indivID),val(sampleID), emit: sample
 
         script:
         gvcf = bam.getBaseName() + ".g.vcf.gz"

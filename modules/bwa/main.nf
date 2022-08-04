@@ -1,4 +1,4 @@
-process align {
+process BWA {
 
         input:
         tuple val(indivID), val(sampleID), val(libraryID), val(rgID), val(platform_unit), val(platform), val(platform_model), val(center), val(run_date),path(fastqR1),path(fastqR2)

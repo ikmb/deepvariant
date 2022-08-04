@@ -1,4 +1,4 @@
-process long_read_align {
+process PBMM2 {
 
 	label 'pbmm2'
 
@@ -6,7 +6,7 @@ process long_read_align {
 	tuple val(indivID),val(sampleID),path(fastq)
 
 	output:
-	tuple val(indivID),val(sampleID),path(bam),path(bai)
+	tuple val(indivID),val(sampleID),path(bam),path(bai), emit: bam
 
 	script:
 	bam = fastq.getSimpleName() + ".bam"
