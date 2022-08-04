@@ -1,18 +1,19 @@
-process merge_and_dedup {
+process SAMTOOLS_MERGE_AND_DEDUP {
 
-        publishDir "${params.outdir}/${indivID}/${sampleID}/Align", mode: 'copy'
+	tag "${meta.patient_id}|${meta.sample_id}"
+
+        publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/Align", mode: 'copy'
 
         input:
-        tuple val(indivID), val(sampleID), path(aligned_bam_list)
+        tuple val(meta), path(aligned_bam_list)
 
         output:
-        tuple val(indivID),val(sampleID),path(merged_bam),path(merged_bam_index), emit: bam
+        tuple val(meta),path(merged_bam),path(merged_bam_index), emit: bam
         tuple path(merged_bam),path(merged_bam_index), emit: bam_simple
 
         script:
-        merged_bam = indivID + "_" + sampleID + ".merged.md.cram"
+        merged_bam = meta.patient_id + "_" + meta.sample_id + ".merged.md.cram"
         merged_bam_index = merged_bam + ".crai"
-        sample_name = indivID + "_" + sampleID
 
         if (aligned_bam_list.size() > 1 && aligned_bam_list.size() < 1000 ) {
                 """
@@ -32,19 +33,21 @@ process merge_and_dedup {
         }
 }
 
-process merge_bam_files {
+process SAMTOOLS_MERGE_BAM {
 
-	publishDir "${params.outdir}/${indivID}/${sampleID}/Align", mode: 'copy'
+	tag "${meta.patient_id}|${meta.sample_id}"
+
+	publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/Align", mode: 'copy'
 
 	input:
-        tuple val(indivID), val(sampleID), path(bams),path(bais)
+        tuple val(meta), path(bams),path(bais)
 
         output:
-        tuple val(indivID),val(sampleID),path(merged_bam),path(merged_bam_index)
+        tuple val(meta),path(merged_bam),path(merged_bam_index), emit: bam
 	tuple path(merged_bam),path(merged_bam_index)
 
         script:
-        merged_bam = indivID + "_" + sampleID + ".merged.cram"
+        merged_bam = meta.patient_id + "_" + meta.sample_id + ".merged.cram"
         merged_bam_index = merged_bam + ".crai"
 
 	"""

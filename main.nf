@@ -13,7 +13,7 @@ params.dict = params.genomes[params.genome].dict
 
 params.mmi = params.genomes[params.genome].mmi
 
-params.bed = params.genomes[params.genome].bed
+params.bed = params.intervals ?: params.genomes[params.genome].bed
 
 params.fai = params.genomes[params.genome].fai
 params.fastagz = params.genomes[params.genome].fastagz
@@ -41,7 +41,7 @@ if (params.pacbio) {
 
 	Channel.fromPath(params.samples)
 		.splitCsv(sep: ';', header: true)
-		.map{ row-> tuple(row.IndivID,row.SampleID,file(row.R1) ) }
+		.map { create_pacbio_channel(it) }
 		.set { reads }
 
 	Channel.fromPath(params.tandem_repeats)
@@ -54,19 +54,19 @@ if (params.pacbio) {
 
 	Channel.fromPath(params.samples)
 		.splitCsv(sep: ';', header: true)
-		.map{ row-> tuple( row.IndivID,row.SampleID,row.libraryID,row.rgID,row.platform_unit,row.platform,row.platform_model,row.center,row.run_date,file(row.R1),file(row.R2)  ) }
+		.map { create_fastq_channel(it) }
 		.set { reads }
 }
 
 bed = Channel.fromPath(params.bed)
 
 // Import workflows
-include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_illumina/main.nf" params(params)
-include { DEEPVARIANT_PACBIO } from "./workflows/deepvariant_pacbio/main.nf" params(params)
-include { CNVKIT } from "./workflows/cnvkit/main.nf" params(params)
-include { multiqc ; wgs_coverage ; picard_wgs_metrics } from "./modules/qc/main.nf" params(params)
-include { vcf_stats } from "./modules/vcf/main.nf" params(params)
-include { vep } from "./modules/vep/main.nf" params(params)
+include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_illumina/main.nf"
+include { DEEPVARIANT_PACBIO } from "./workflows/deepvariant_pacbio/main.nf"
+include { CNVKIT } from "./workflows/cnvkit/main.nf" 
+include { MULTIQC ; MOSDEPTH ; PICARD_WGS_METRICS  } from "./modules/qc/main.nf"
+include { VCF_STATS } from "./modules/vcf/main.nf"
+include { VEP } from "./modules/vep/main.nf"
 
 // Initialize channels
 Channel
@@ -112,13 +112,50 @@ workflow {
 
 	// effect prediction
 	if (params.vep) {
-		vep(vcf)
+		VEP(vcf)
 	}
 
-	wgs_coverage(bam,bed.collect())
-	picard_wgs_metrics(bam,bed.collect())
-	vcf_stats(vcf)
+	MOSDEPTH(bam,bed.collect())
+	PICARD_WGS_METRICS(bam,bed.collect())
+	VCF_STATS(vcf)
 
-	multiqc(wgs_coverage.out.mix(vcf_stats.out,picard_wgs_metrics.out).collect())
+	MULTIQC(
+		MOSDEPTH.out.mix(
+			VCF_STATS.out.stats,PICARD_WGS_METRICS.out
+		).collect()
+	)
 
+}
+
+def create_fastq_channel(LinkedHashMap row) {
+
+    // IndivID;SampleID;libraryID;rgID;rgPU;platform;platform_model;Center;Date;R1;R2
+
+    def meta = [:]
+    meta.patient_id = row.IndivID
+    meta.sample_id = row.SampleID
+    meta.library_id = row.libraryID
+    meta.readgroup_id = row.rgID
+    meta.center = row.Center
+    meta.date = row.Date
+    meta.platform_unit = row.rgPU
+
+    def array = []
+    array = [ meta, file(row.R1), file(row.R2) ]
+
+    return array
+}
+
+def create_pacbio_channel(LinkedHashMap row) {
+
+    // IndivID;SampleID;libraryID;rgID;rgPU;platform;platform_model;Center;Date;R1;R2
+
+    def meta = [:]
+    meta.patient_id = row.IndivID
+    meta.sample_id = row.SampleID
+
+    def array = []
+    array = [ meta, file(row.R1) ]
+
+    return array
 }

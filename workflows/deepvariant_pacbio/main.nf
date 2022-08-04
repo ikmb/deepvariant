@@ -1,9 +1,9 @@
-include { long_read_align } from "./../../modules/minimap/main.nf" params(params)
-include { deepvariant } from "./../../modules/deepvariant/main.nf" params(params)
-include { merge_bam_files } from "./../../modules/samtools/main.nf" params(params)
-include { vcf_add_dbsnp ; vcf_index ; vcf_pass ; vcf_get_sample} from "./../../modules/vcf/main.nf" params(params)
-include { pbsv_sig; pbsv_call } from "./../../modules/sv/main.nf" params(params)
-include { vcf_compress_and_index } from "./../../modules/htslib/main.nf" params(params)
+include { PBMM2 } from "./../../modules/minimap/main.nf"
+include { DEEPVARIANT } from "./../../modules/deepvariant/main.nf"
+include { SAMTOOLS_MERGE_BAM } from "./../../modules/samtools/main.nf"
+include { VCF_ADD_DBSNP ; VCF_INDEX ; VCF_PASS ; VCF_GET_SAMPLE } from "./../../modules/vcf/main.nf"
+include { PBSV_SIG; PBSV_CALL } from "./../../modules/sv/main.nf"
+include { VCF_COMPRESS_AND_INDEX } from "./../../modules/htslib/main.nf" 
 
 workflow DEEPVARIANT_PACBIO {
 
@@ -17,19 +17,34 @@ workflow DEEPVARIANT_PACBIO {
 		fai
 
 	main:
-		long_read_align(reads)
-		merge_bam_files(long_read_align.out[0].groupTuple(by: [0,1]) )
-		deepvariant(merge_bam_files.out[0],bed.collect(),fastaGz.collect(),gzFai.collect(),gzi.collect(),fai.collect() )
-		vcf_index(deepvariant.out[1])
-		vcf_pass(vcf_index.out)
-		vcf_add_dbsnp(vcf_pass.out)
-		pbsv_sig(long_read_align.out[0],repeats.collect())
-		pbsv_call(pbsv_sig.out[1].collect())
-		vcf_compress_and_index(pbsv_call.out)
-		vcf_get_sample(deepvariant.out[2].combine(vcf_compress_and_index.out).collect(),"SVs")
+		PBMM2(reads)
+		SAMTOOLS_MERGE_BAM(
+			PBMM2.out.bam.groupTuple() 
+		)
+		DEEPVARIANT(
+			SAMTOOLS_MERGE_BAM.out.bam,
+			bed.collect(),
+			fastaGz.collect(),
+			gzFai.collect(),
+			gzi.collect(),
+			fai.collect() 
+		)
+		VCF_INDEX(DEEPVARIANT.out.vcf)
+		VCF_PASS(VCF_INDEX.out.vcf)
+		VCF_ADD_DBSNP(VCF_PASS.out.vcf)
+		PBSV_SIG(
+			PBMM2.out.bam,
+			repeats.collect()
+		)
+		PBSV_CALL(PBSV_SIG.out[1].collect())
+		VCF_COMPRESS_AND_INDEX(PBSV_CALL.out.vcf)
+		VCF_GET_SAMPLE(
+			DEEPVARIANT.out.sample.combine(VCF_COMPRESS_AND_INDEX.out).collect(),
+			"SVs"
+		)
 	emit:
-		bam = merge_bam_files.out[0]
-		gvcf = deepvariant.out[0]
-		vcf = vcf_add_dbsnp.out.mix(vcf_get_sample.out)
-		vcf_dv = vcf_add_dbsnp.out.vcf
+		bam = SAMTOOLS_MERGE_BAM.out.bam
+		gvcf = DEEPVARIANT.out.gvcf
+		vcf = VCF_ADD_DBSNP.out.mix(VCF_GET_SAMPLE.out.vcf)
+		vcf_dv = VCF_ADD_DBSNP.out.vcf
 }

@@ -1,14 +1,14 @@
-process vep {
+process VEP {
 
 	label 'vep'
 
 	publishDir "${params.outdir}/VEP", mode: 'copy'
 
 	input:
-	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
+	tuple val(meta),path(vcf),path(tbi)
 
 	output:
-	path(vcf_annotated)
+	path(vcf_annotated), emit: vcf
 
 	script:
 	vcf_annotated = vcf.getBaseName() + ".vep.vcf"
@@ -42,13 +42,13 @@ process vep {
         """
 }
 
-process vep2alissa {
+process VEP2ALISSA {
 
 	input:
 	path(vcf)
 
 	output:
-	path(alissa_vcf)
+	path(alissa_vcf), emit: vcf
 
 	script:
 	alissa_vcf = vcf.getBaseName() + ".alissa2vep.vcf"

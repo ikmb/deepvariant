@@ -1,12 +1,14 @@
-process long_read_align {
+process PBMM2 {
+
+	tag "${meta.patient_id}|${meta.sample_id}"
 
 	label 'pbmm2'
 
 	input:
-	tuple val(indivID),val(sampleID),path(fastq)
+	tuple val(meta),path(fastq)
 
 	output:
-	tuple val(indivID),val(sampleID),path(bam),path(bai)
+	tuple val(meta),path(bam),path(bai), emit: bam
 
 	script:
 	bam = fastq.getSimpleName() + ".bam"
@@ -14,7 +16,7 @@ process long_read_align {
 	rgid = fastq.getSimpleName()
 	
 	"""
-		pbmm2 align ${params.mmi} $fastq $bam --preset CCS --sort --rg '@RG\\tID:${rgid}\\tSM:${sampleID}\\tCN:${params.center}' -j ${task.cpus}
+		pbmm2 align ${params.mmi} $fastq $bam --preset CCS --sort --rg '@RG\\tID:${meta.readgroup_id}\\tSM:${meta.sample_id}\\tCN:CCGA' -j ${task.cpus}
 	"""
 	
 }

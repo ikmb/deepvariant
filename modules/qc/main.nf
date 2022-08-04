@@ -1,13 +1,15 @@
-process wgs_coverage {
+process MOSDEPTH {
+
+	tag "${meta.patient_id}|${meta.sample_id}"
 
 	label 'mosdepth'
 
 	input:
-	tuple val(indivID),val(sampleID),path(bam),path(bai)
+	tuple val(meta),path(bam),path(bai)
 	path(bed)
 
         output:
-        tuple path(genome_bed_coverage),path(genome_global_coverage)
+        tuple path(genome_bed_coverage),path(genome_global_coverage), emit: coverage
 
         script:
         base_name = bam.getBaseName()
@@ -19,17 +21,18 @@ process wgs_coverage {
         """
 }
 
-process picard_wgs_metrics {
+process PICARD_WGS_METRICS {
+
+	tag "${meta.patient_id}|${meta.sample_id}"
 
 	label 'picard'
 
 	input:
-	tuple val(indivID),val(sampleID),path(bam),path(bai)
+	tuple val(meta),path(bam),path(bai)
         path(bed)
 
 	output:
-	path(picard_stats)
-
+	path(picard_stats), emit: stats
 	script:
 	base_name = bam.getBaseName()
 	picard_stats = base_name + "_wgs_metrics.txt"
@@ -41,7 +44,7 @@ process picard_wgs_metrics {
 	"""
 }
 
-process multiqc {
+process MULTIQC {
 
         label 'multiqc'
 
@@ -51,7 +54,7 @@ process multiqc {
         path('*')
 
         output:
-        path("multiqc_report.html")
+        path("multiqc_report.html"), emit: html
 
         script:
 

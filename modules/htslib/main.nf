@@ -1,4 +1,4 @@
-process vcf_compress_and_index {
+process VCF_COMPRESS_AND_INDEX {
 
 	//publishDir "${params.outdir}/SVs", mode: 'copy'
 
@@ -6,7 +6,7 @@ process vcf_compress_and_index {
 	path(vcf)
 
 	output:
-	tuple path(vcf_gz),path(vcf_gz_tbi)
+	tuple path(vcf_gz),path(vcf_gz_tbi), emit: vcf
 
 	script:
 	
@@ -20,13 +20,13 @@ process vcf_compress_and_index {
 
 }
 
-process bed_compress_and_index {
+process BED_COMPRESS_AND_INDEX {
 
 	input:
 	path(bed)
 
 	output:
-	tuple path(bed_gz),path(bed_gz_tbi)
+	tuple path(bed_gz),path(bed_gz_tbi), emit: bed
 
 	script:
 	bed_gz = bed + ".gz"

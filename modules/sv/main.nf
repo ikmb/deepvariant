@@ -1,13 +1,15 @@
-process pbsv_sig {
+process PBSV_SIG {
+
+	tag "${meta.patient_id}|${meta.sample_id}"
 
 	label 'pbsv'
 
 	input:
-	tuple val(indivID),val(sampleID),path(bam),path(pbi)
+	tuple val(meta),path(bam),path(pbi)
 	path(repeat_ref)
 
 	output:
-	tuple val(indivID),val(sampleID),path(sig)
+	tuple val(meta),path(sig), emit: sig
 	path(sig)
 
 	script:
@@ -18,7 +20,7 @@ process pbsv_sig {
 	"""
 }
 
-process pbsv_call {
+process PBSV_CALL {
 
 	publishDir "${params.outdir}/SVs", mode: 'copy'
 
@@ -28,7 +30,7 @@ process pbsv_call {
 	path(sigs)
 
 	output:
-	path(vcf)
+	path(vcf), emit: vcf
 
 	script:
 	vcf = "SVs.vcf"
@@ -39,28 +41,30 @@ process pbsv_call {
 
 }
 
-process manta {
+process MANTA {
+
+	tag "${meta.patient_id}|${meta.sample_id}"
 
 	label 'manta'
 
-	publishDir "${params.outdir}/${indivID}/${sampleID}/SV", mode: 'copy'
+	publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/SV", mode: 'copy'
 
 	input:
-	tuple val(indivID),val(sampleID),path(bam),path(bai)
+	tuple val(meta),path(bam),path(bai)
 	tuple path(bed_gz), path(bed_gz_tbi)
 
 	output:
-	tuple val(indivID),val(sampleID),path(sv),file(sv_tbi)
-	tuple val(indivID),val(sampleID),path(indel),file(indel_tbi)
-	tuple val(indivID),val(sampleID),path(sv_can),file(sv_can_tbi)
+	tuple val(meta),path(sv),file(sv_tbi), emit: sv
+	tuple val(meta),path(indel),file(indel_tbi), emit: indel
+	tuple val(meta),path(sv_can),file(sv_can_tbi), emit: sv_can
 
 	script:
 	
-	sv = indivID + "_" + sampleID + ".diploidSV.vcf.gz"
+	sv = meta.patient_id + "_" + meta.sample_id + ".diploidSV.vcf.gz"
         sv_tbi = sv + ".tbi"
-        indel = indivID + "_" + sampleID + ".candidateSmallIndels.vcf.gz"
+        indel = meta.patient_id + "_" + meta.sample_id + ".candidateSmallIndels.vcf.gz"
         indel_tbi = indel + ".tbi"
-        sv_can = indivID + "_" + sampleID + ".candidateSV.vcf.gz"
+        sv_can = meta.patient_id + "_" + meta.sample_id + ".candidateSV.vcf.gz"
         sv_can_tbi = sv_can + ".tbi"
         
 	"""

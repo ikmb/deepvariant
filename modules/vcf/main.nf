@@ -1,4 +1,4 @@
-process glnexus {
+process GLNEXUS {
 
 	scratch true
 	label 'glnexus'
@@ -8,7 +8,7 @@ process glnexus {
 	path(bed)
 
 	output:
-	path(merged_vcf)
+	path(merged_vcf), emit: vcf
 
 	script:
 	 merged_vcf = "deepvariant.merged.vcf.gz"
@@ -22,15 +22,15 @@ process glnexus {
 	"""
 }
 
-process vcf_add_dbsnp {
+process VCF_ADD_DBSNP {
 
-	publishDir "${params.outdir}/${indivID}/${sampleID}/Variants", mode: 'copy'
+	publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/Variants", mode: 'copy'
 
 	input:
-	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
+	tuple val(meta),path(vcf),path(tbi)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf_annotated),path(vcf_annotated_index), emit: vcf
+	tuple val(meta),path(vcf_annotated),path(vcf_annotated_index), emit: vcf
 
 	script:
 	vcf_annotated = vcf.getBaseName() + ".rsids.vcf.gz"
@@ -42,39 +42,39 @@ process vcf_add_dbsnp {
 	"""
 }
 
-process vcf_get_sample {
+process VCF_GET_SAMPLE {
 
-	publishDir "${params.outdir}/${indivID}/${sampleID}/${folder}", mode: 'copy'
+	publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/${folder}", mode: 'copy'
 
 	label 'glnexus'
 
 	input:
-	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
+	tuple val(meta),path(vcf),path(tbi)
 	val(folder)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf_sample),path(vcf_sample_index)
+	tuple val(meta),path(vcf_sample),path(vcf_sample_index), emit: vcf
 
 	script:
-	vcf_sample = vcf.getSimpleName() + "." + sampleID  + ".vcf.gz"
+	vcf_sample = vcf.getSimpleName() + "." + meta.sample_id  + ".vcf.gz"
 	vcf_sample_index = vcf_sample + ".tbi"
 
 	"""
-		bcftools view -o $vcf_sample -O z -a -s $sampleID $vcf
+		bcftools view -o $vcf_sample -O z -a -s ${meta.sample_id} $vcf
 		tabix $vcf_sample
 	"""
 
 }
 
-process vcf_stats {
+process VCF_STATS {
 
 	label 'glnexus'
 
 	input:
-	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
+	tuple val(meta),path(vcf),path(tbi)
 
 	output:
-	path(vcf_stats)
+	path(vcf_stats), emit: stats
 
 	script:
 	vcf_stats = vcf.getBaseName() + ".stats"
@@ -85,13 +85,13 @@ process vcf_stats {
 
 }
 	
-process vcf_index {
+process VCF_INDEX {
 	
 	input:
-	tuple val(indivID),val(sampleID),path(vcf)
+	tuple val(meta),path(vcf)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
+	tuple val(meta),path(vcf),path(tbi), emit: vcf
 
 	script:
 	tbi = vcf + ".tbi"
@@ -102,14 +102,15 @@ process vcf_index {
 
 }
 
-process vcf_pass {
+process VCF_PASS {
 
-	publishDir "${params.outdir}/${indivID}/${sampleID}/Variants", mode: 'copy'
+	publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/Variants", mode: 'copy'
+
 	input:
-	tuple val(indivID),val(sampleID),path(vcf),path(tbi)
+	tuple val(meta),path(vcf),path(tbi)
 
 	output:
-	tuple val(indivID),val(sampleID),path(vcf_f),path(tbi_f)
+	tuple val(meta),path(vcf_f),path(tbi_f), emit: vcf
 
 	script:
 	vcf_f = vcf.getSimpleName() + ".pass.vcf.gz"
