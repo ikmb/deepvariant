@@ -29,6 +29,9 @@ process DEEPVARIANT {
 	def options = ""
 	if (params.pacbio) {
 		model = "PACBIO"
+		if (params.intervals) {
+			options = "--regions=${bed}"
+		}
 	} else {
 		options = "--regions=${bed}"
 	}
