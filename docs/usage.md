@@ -6,7 +6,7 @@ This pipeline requires nextflow and singularity, so make sure these modules are 
 
 To run the pipeline, a typical command will looks as follows:
 
-`nextflow run ikmb/deepvariant --samples Samples.csv --genome GRCh38`
+`nextflow run ikmb/deepvariant --samples Samples.csv --genome GRCh38_p14`
 
 These options are further explained in the following:
 
@@ -45,3 +45,7 @@ For Illumina input, please note that all assemblies come with pre-defined callin
 #### `--intervals`
 
 A BED file with calling regions; otherwise the whole-genome calling region set from BROAD will be used. 
+
+#### `--phase`
+
+Enable phasing for short-read data (phasing is performed by default for Pacbio data)
