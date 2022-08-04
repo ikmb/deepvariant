@@ -41,7 +41,7 @@ if (params.pacbio) {
 
 	Channel.fromPath(params.samples)
 		.splitCsv(sep: ';', header: true)
-		.map{ row-> tuple(row.IndivID,row.SampleID,file(row.R1) ) }
+		.map { create_pacbio_channel(it) }
 		.set { reads }
 
 	Channel.fromPath(params.tandem_repeats)
@@ -54,7 +54,7 @@ if (params.pacbio) {
 
 	Channel.fromPath(params.samples)
 		.splitCsv(sep: ';', header: true)
-		.map{ row-> tuple( row.IndivID,row.SampleID,row.libraryID,row.rgID,row.platform_unit,row.platform,row.platform_model,row.center,row.run_date,file(row.R1),file(row.R2)  ) }
+		.map { create_fastq_channel(it) }
 		.set { reads }
 }
 
@@ -125,4 +125,37 @@ workflow {
 		).collect()
 	)
 
+}
+
+def create_fastq_channel(LinkedHashMap row) {
+
+    // IndivID;SampleID;libraryID;rgID;rgPU;platform;platform_model;Center;Date;R1;R2
+
+    def meta = [:]
+    meta.patient_id = row.IndivID
+    meta.sample_id = row.SampleID
+    meta.library_id = row.libraryID
+    meta.readgroup_id = row.rgID
+    meta.center = row.Center
+    meta.date = row.Date
+    meta.platform_unit = row.rgPU
+
+    def array = []
+    array = [ meta, file(row.R1), file(row.R2) ]
+
+    return array
+}
+
+def create_pacbio_channel(LinkedHashMap row) {
+
+    // IndivID;SampleID;libraryID;rgID;rgPU;platform;platform_model;Center;Date;R1;R2
+
+    def meta = [:]
+    meta.patient_id = row.IndivID
+    meta.sample_id = row.SampleID
+
+    def array = []
+    array = [ meta, file(row.R1) ]
+
+    return array
 }

@@ -1,13 +1,15 @@
 process DEEPVARIANT {
 
-        publishDir "${params.outdir}/${indivID}/${sampleID}/DeepVariant", mode: 'copy'
+	tag "${meta.patient_id}|${meta.sample_id}"
+
+        publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/DeepVariant", mode: 'copy'
 
         label 'deepvariant'
 
         scratch true
 
         input:
-        tuple val(indivID), val(sampleID), path(bam),path(bai)
+        tuple val(meta), path(bam),path(bai)
         path(bed)
 	path(fastaGz)
 	path(gzFai)
@@ -15,9 +17,9 @@ process DEEPVARIANT {
 	path(fai)
 
         output:
-        tuple val(indivID),val(sampleID),path(gvcf), emit: gvcf
-        tuple val(indivID),val(sampleID),path(vcf), emit: vcf
-	tuple val(indivID),val(sampleID), emit: sample
+        tuple val(meta),path(gvcf), emit: gvcf
+        tuple val(meta),path(vcf), emit: vcf
+	val(meta), emit: sample
 
         script:
         gvcf = bam.getBaseName() + ".g.vcf.gz"

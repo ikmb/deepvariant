@@ -1,9 +1,11 @@
 process MOSDEPTH {
 
+	tag "${meta.patient_id}|${meta.sample_id}"
+
 	label 'mosdepth'
 
 	input:
-	tuple val(indivID),val(sampleID),path(bam),path(bai)
+	tuple val(meta),path(bam),path(bai)
 	path(bed)
 
         output:
@@ -21,10 +23,12 @@ process MOSDEPTH {
 
 process PICARD_WGS_METRICS {
 
+	tag "${meta.patient_id}|${meta.sample_id}"
+
 	label 'picard'
 
 	input:
-	tuple val(indivID),val(sampleID),path(bam),path(bai)
+	tuple val(meta),path(bam),path(bai)
         path(bed)
 
 	output:

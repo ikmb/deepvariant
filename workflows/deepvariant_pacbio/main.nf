@@ -19,10 +19,10 @@ workflow DEEPVARIANT_PACBIO {
 	main:
 		PBMM2(reads)
 		SAMTOOLS_MERGE_BAM(
-			PBMM2.out.bam.groupTuple(by: [0,1]) 
+			PBMM2.out.bam.groupTuple() 
 		)
 		DEEPVARIANT(
-			SAMTOOLS_MERGE_BAM.outbam,
+			SAMTOOLS_MERGE_BAM.out.bam,
 			bed.collect(),
 			fastaGz.collect(),
 			gzFai.collect(),
@@ -30,8 +30,8 @@ workflow DEEPVARIANT_PACBIO {
 			fai.collect() 
 		)
 		VCF_INDEX(DEEPVARIANT.out.vcf)
-		VCF_PASS(vcf_index.out.vcf)
-		VCF_ADD_DBSNP(vcf_pass.out.vcf)
+		VCF_PASS(VCF_INDEX.out.vcf)
+		VCF_ADD_DBSNP(VCF_PASS.out.vcf)
 		PBSV_SIG(
 			PBMM2.out.bam,
 			repeats.collect()
