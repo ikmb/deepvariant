@@ -1,4 +1,4 @@
-include { cnvkit_autobin ;  cnvkit_coverage ; cnvkit_reference ; cnvkit_process ; cnvkit_segmetrics ; cnvkit_call ; cnvkit_genemetrics ;  cnvkit_breaks ; cnvkit_export ; cnvkit_plots } from "./../../modules/cnvkit/main.nf" params(params)
+include { CNVKIT_AUTOBIN ;  CNVKIT_COVERAGE ; CNVKIT_REFERENCE ; CNVKIT_PROCESS ; CNVKIT_SEGMETRICS ; CNVKIT_CALL ; CNVKIT_GENEMETRICS ;  CNVKIT_BREAKS ; CNVKIT_EXPORT ; CNVKIT_PLOTS } from "./../../modules/cnvkit/main.nf"
 
 
 workflow CNVKIT {
@@ -8,19 +8,19 @@ workflow CNVKIT {
 		bam
 
 	main:
-		cnvkit_autobin(bed,bam.map { i,s,b,n -> [ b,n] }.collect())
-		cnvkit_coverage(bam,cnvkit_autobin.out.collect())
-		cnvkit_reference(cnvkit_coverage.out[0].collect())	
-		cnvkit_process(cnvkit_coverage.out[1],cnvkit_reference.out.collect())
-		cnvkit_segmetrics(cnvkit_process.out)
-		cnvkit_call(cnvkit_segmetrics.out)
-		cnvkit_genemetrics(cnvkit_call.out)
-		cnvkit_breaks(cnvkit_call.out)
-		cnvkit_export(cnvkit_call.out)
-		cnvkit_plots(cnvkit_call.out)
+		CNVKIT_AUTOBIN(bed,bam.map { i,s,b,n -> [ b,n] }.collect())
+		CNVKIT_COVERAGE(bam,cnvkit_autobin.out.collect())
+		CNVKIT_REFERENCE(cnvkit_coverage.out[0].collect())	
+		CNVKIT_PROCESS(cnvkit_coverage.out[1],cnvkit_reference.out.collect())
+		CNVKIT_SEGMETRICS(cnvkit_process.out)
+		CNVKIT_CALL(cnvkit_segmetrics.out)
+		CNVKIT_GENEMETRICS(cnvkit_call.out)
+		CNVKIT_BREAKS(cnvkit_call.out)
+		CNVKIT_EXPORT(cnvkit_call.out)
+		CNVKIT_PLOTS(cnvkit_call.out)
 
 	emit:
-		bed = cnvkit_export.out[0]
-		vcf = cnvkit_export.out[1]				
+		bed = CNVKIT_EXPORT.out[0]
+		vcf = CNVKIT_EXPORT.out[1]				
 
 }

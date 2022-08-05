@@ -70,7 +70,7 @@ else
 
 	groups = fastq_files.group_by{|f| f.split("/")[-1].split(/_R[1,2]/)[0] }
 
-	puts "IndivID;SampleID;libraryID;rgID;rgPU;platform;platform_model;Center;Date;R1;R2"
+	puts "IndivID;SampleID;libraryID;rgID;rgPU;R1;R2"
 
 	groups.each do |group, files|
 
@@ -90,7 +90,7 @@ else
 
 	        pgu = flowcell_id + "." + lane + "." + index
 
-        	puts "Indiv_#{sample};Sample_#{sample};#{library};#{readgroup};#{pgu};Illumina;#{platform};#{center};#{date};#{left};#{right}"
+        	puts "Indiv_#{sample};Sample_#{sample};#{library};#{readgroup};#{pgu};#{left};#{right}"
 
 	end
 
