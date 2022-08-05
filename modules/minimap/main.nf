@@ -16,7 +16,7 @@ process PBMM2 {
 	rgid = fastq.getSimpleName()
 	
 	"""
-		pbmm2 align ${params.mmi} $fastq $bam --preset CCS --sort --rg '@RG\\tID:${meta.readgroup_id}\\tSM:${meta.sample_id}\\tCN:CCGA' -j ${task.cpus}
+		pbmm2 align ${params.mmi} $fastq $bam --preset CCS --sort --rg '@RG\\tID:${rgid}\\tSM:${meta.sample_id}\\tCN:CCGA' -j ${task.cpus}
 	"""
 	
 }
