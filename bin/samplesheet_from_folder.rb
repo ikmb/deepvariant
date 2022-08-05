@@ -66,6 +66,8 @@ if options.pacbio
 
 else 
 
+	# 220600000039-A04_22Jun39-A04-L1_S1_L001_R1_001.fastq.gz
+
 	fastq_files = Dir["#{options.folder}/*_R*.fastq.gz"].sort
 
 	groups = fastq_files.group_by{|f| f.split("/")[-1].split(/_R[1,2]/)[0] }
@@ -77,7 +79,7 @@ else
         	left,right = files.sort.collect{|f| File.absolute_path(f)}
 
 	        library = group.split("_L00")[0]
-        	sample = group.split("-")[0]
+        	sample = group.split("_L00")[0]
 
 	        e = `zcat #{left} | head -n1 `
 		e.gsub!("@", "")
@@ -90,7 +92,7 @@ else
 
 	        pgu = flowcell_id + "." + lane + "." + index
 
-        	puts "Indiv_#{sample};Sample_#{sample};#{library};#{readgroup};#{pgu};#{left};#{right}"
+        	puts "#{sample};Sample_#{sample};#{library};#{readgroup};#{pgu};#{left};#{right}"
 
 	end
 
