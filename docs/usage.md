@@ -10,6 +10,11 @@ To run the pipeline, a typical command will looks as follows:
 
 These options are further explained in the following:
 
+### Sequencing setup(s)
+
+WGS data is often produced in multiple sequencing runs or across multiple lanes. This pipeline will automatically deal with such situations by using the sampleID as a grouping variable. Please do not
+concatenate your reads beforehand ; just ensure that data belonging to the same biological sample are grouped under the same id. 
+
 ### Options
 
 #### `--samples`
