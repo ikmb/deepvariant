@@ -104,7 +104,7 @@ process VCF_INDEX {
 
 process VCF_PASS {
 
-	publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/Variants", mode: 'copy'
+	//publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/Variants", mode: 'copy'
 
 	input:
 	tuple val(meta),path(vcf),path(tbi)
