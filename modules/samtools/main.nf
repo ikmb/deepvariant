@@ -57,3 +57,22 @@ process SAMTOOLS_MERGE_BAM {
 
 }
 
+process SAMTOOLS_INDEX {
+
+	tag "${meta.patient_id}|${meta.sample_id}"
+
+	input:
+	tuple val(meta),path(bam)
+
+	output:
+	tuple val(meta),path(bam),path(bai), emit: bam
+
+	script:
+
+	bai = bam + ".bai"
+
+	"""
+		samtools index $bam
+	"""
+
+}

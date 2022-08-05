@@ -1,6 +1,6 @@
 include { PBMM2 } from "./../../modules/minimap/main.nf"
 include { DEEPVARIANT } from "./../../modules/deepvariant/main.nf"
-include { SAMTOOLS_MERGE_BAM } from "./../../modules/samtools/main.nf"
+include { SAMTOOLS_MERGE_BAM; SAMTOOLS_INDEX } from "./../../modules/samtools/main.nf"
 include { VCF_ADD_DBSNP ; VCF_INDEX ; VCF_PASS ; VCF_GET_SAMPLE } from "./../../modules/vcf/main.nf"
 include { PBSV_SIG; PBSV_CALL } from "./../../modules/sv/main.nf"
 include { VCF_COMPRESS_AND_INDEX } from "./../../modules/htslib/main.nf" 
@@ -18,11 +18,29 @@ workflow DEEPVARIANT_PACBIO {
 
 	main:
 		PBMM2(reads)
+
+		bam_mapped = PBMM2.out.bam.map { meta, bam, bai ->
+                        new_meta = [:]
+                        new_meta.patient_id = meta.patient_id
+                        new_meta.sample_id = meta.sample_id
+                        def groupKey = meta.sample_id
+                        tuple( groupKey, new_meta, bam, bai)
+                }.groupTuple(by: [0,1]).map { g ,new_meta ,bam, bai -> [ new_meta, bam, bai ] }
+
+                bam_mapped.branch {
+                        single:   it[1].size() == 1
+                        multiple: it[1].size() > 1
+                }.set { bam_to_merge }
+
+		// Merge and index multi-cell samples
 		SAMTOOLS_MERGE_BAM(
-			PBMM2.out.bam.groupTuple() 
+			bam_to_merge.multiple.map {  m,b,i -> tuple(m,b) }
 		)
+
+		ch_bams = bam_to_merge.single.mix(SAMTOOLS_MERGE_BAM.out.bam)
+
 		DEEPVARIANT(
-			SAMTOOLS_MERGE_BAM.out.bam,
+			ch_bams,
 			bed.collect(),
 			fastaGz.collect(),
 			gzFai.collect(),
