@@ -10,6 +10,26 @@ To run the pipeline, a typical command will looks as follows:
 
 These options are further explained in the following:
 
+### Analytical options
+
+#### `--tools`
+
+The pipeline supports different tool chains, depending on input. These can be specified as comma-separated list, for example:
+
+Short reads: `--tools Deepvariant,Manta,Vep` will perform read alignments, SNP/Indel as well as SV calling and finally run the variant effect predictor on the SNP/INDEL set(s).
+
+Long reads: `--tools Deepvariant,PBS` will perform read alignments and SNP/Indel as well as SV calling.
+
+Providing no tools will only perform alignment and deduplication of alignments. 
+
+All options:
+
+* Deepvariant - perform variant calling (long- and short reads)
+* PBSV - perform SV calling (long reads)
+* Manta - perform SV calling (short reads)
+* VEP - perform variant effect prediction (long- and short reads, requires Deepvariant)
+* Intersect - create a BAM file that only includes those intervals specified by --intervals (or that is part of the built-in calling regions)
+
 ### Sequencing setup(s)
 
 WGS data is often produced in multiple sequencing runs or across multiple lanes. This pipeline will automatically deal with such situations by using the sampleID as a grouping variable. Please do not
@@ -64,3 +84,4 @@ A BED file with calling regions; otherwise the whole-genome calling region set f
 #### `--phase`
 
 Enable phasing for short-read data (phasing is performed by default for Pacbio data)
+

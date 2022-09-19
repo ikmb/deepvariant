@@ -72,6 +72,9 @@ include { MULTIQC ; MOSDEPTH ; PICARD_WGS_METRICS  } from "./modules/qc/main.nf"
 include { VCF_STATS } from "./modules/vcf/main.nf"
 include { VEP } from "./modules/vep/main.nf"
 include { BAM_SELECT_READS } from "./modules/samtools/main.nf"
+include { MANTA } from "./modules/sv/main"
+include { BED_COMPRESS_AND_INDEX } from "./modules/htslib/main.nf"
+include { PBSV_SIG; PBSV_CALL } from "./modules/sv/main.nf"
 
 // Initialize channels
 Channel
@@ -108,25 +111,32 @@ workflow {
 	if (params.pacbio) {
 
 		PB_ALIGN(reads)
+                ch_bam = ch_bam.mix(PB_ALIGN.out.bam)
 
 		if ('deepvariant' in tools) {
 			DEEPVARIANT_LONG_READS(
-				PB_ALIGN.out.bam,
+				ch_bam,
 				bed,
-				tandem_repeats,
 				fastaGz,
 				gzFai,
 				gzi,
 				fai
 			)
 		}
+		if ('pbsv' in tools) {
+			PBSV_SIG(
+                	        ch_bam,
+                        	tandem_repeats.collect()		
+	                )
+        	        PBSV_CALL(PBSV_SIG.out[1].collect())
+		}
 
-		ch_bam = ch_bam.mix(PB_ALIGN.out.bam)
 		ch_vcf = ch_vcf.mix(DEEPVARIANT_LONG_READS.out.vcf)
 
 	} else {
 
 		TRIM_AND_ALIGN(reads,bed)
+		ch_bam = ch_bam.mix(TRIM_AND_ALIGN.out.bam)
 
 		if ('intersect' in tools) {
 			BAM_SELECT_READS(
@@ -144,8 +154,15 @@ workflow {
 				gzi,
 				fai
 			)
-			ch_bam = ch_bam.mix(DEEPVARIANT_SHORT_READS.out.bam)
 			ch_vcf = ch_vcf.mix(DEEPVARIANT_SHORT_READS.out.vcf)
+		}
+
+		if ('manta' in tools) {
+			BED_COMPRESS_AND_INDEX(bed)
+			MANTA(
+				ch_bam,
+				BED_COMPRESS_AND_INDEX.out.bed.collect()
+			)
 		}
 	}
 
