@@ -1,3 +1,30 @@
+process BAM_SELECT_READS {
+
+	tag "${meta.patient_id}|${meta.sample_id}"
+
+	publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/SubsetReads", mode: 'copy'
+
+	input:
+	tuple val(meta),path(bam),path(bai)
+	path(bed)
+
+	output:
+	tuple val(meta),path(R1),path(R2), emit: fastq
+
+	script:
+	R1 = bam.getBaseName() + "_R1_001.fastq.gz"
+	R2 = bam.getBaseName() + "_R2_001.fastq.gz"
+
+	"""
+		samtools view -hb -o mapped.bam -L $bed $bam
+		samtools view -hb -o unmapped.bam -f 4 $bam
+		samtools merge merged.bam mapped.bam unmapped.bam
+		samtools collate merged.bam -u -O merged.bam | samtools fastq -1 $R1 -2 $R2 -0 /dev/null -s /dev/null -n
+		rm *mapped.bam merged.bam
+	"""
+
+}
+
 process SAMTOOLS_MERGE_AND_DEDUP {
 
 	tag "${meta.patient_id}|${meta.sample_id}"

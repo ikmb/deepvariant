@@ -53,7 +53,7 @@ The name of the genome assembly version to use. Allowed options are:
 * GRCh37 (1000Genomes reference with decoys)
 * GRCh38 (DEFUNCT: human genome WITHOUT alt contigs, as recommended by Heng Li)
 * GRCh38_p14 (Current human reference genome recommended for variant analysis)
-* hg38 (DEFUNCT: human genome with all alt contigs, as distributed by the BROAD)
+* hg38 (the Wittig reference, p13 with only the primary chromosomes and no unplaced contigs etc)
 
 For Illumina input, please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These were manually curated to exclude regions that cannot be reliably called with short read data.
 
