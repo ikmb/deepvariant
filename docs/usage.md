@@ -28,7 +28,7 @@ All options:
 * PBSV - perform SV calling (long reads)
 * Manta - perform SV calling (short reads)
 * VEP - perform variant effect prediction (long- and short reads, requires Deepvariant)
-* Intersect - create a BAM file that only includes those intervals specified by --intervals (or that is part of the built-in calling regions)
+* Intersect - create a set of FastQ files that only include those reads overlapping --intervals (or the built-in calling regions)
 
 ### Sequencing setup(s)
 
