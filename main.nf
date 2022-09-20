@@ -35,6 +35,8 @@ if (!params.fasta || !params.fai || !params.dict || !params.fastagz || !params.g
 	exit 1, "Missing one or several mandatory options..."
 }
 
+tools = params.tools ? params.tools.split(',').collect{it.trim().toLowerCase().replaceAll('-', '').replaceAll('_', '')} : []
+
 if (params.pacbio) {
 
 	params.dv_model = "PACBIO"
@@ -61,12 +63,18 @@ if (params.pacbio) {
 bed = Channel.fromPath(params.bed)
 
 // Import workflows
-include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_illumina/main.nf"
-include { DEEPVARIANT_PACBIO } from "./workflows/deepvariant_pacbio/main.nf"
+include { DEEPVARIANT_SHORT_READS } from "./workflows/deepvariant_short_reads"
+include { DEEPVARIANT_LONG_READS } from "./workflows/deepvariant_long_reads"
+include { PB_ALIGN } from "./workflows/pb_align"
+include { TRIM_AND_ALIGN } from "./workflows/trim_and_align"
 include { CNVKIT } from "./workflows/cnvkit/main.nf" 
 include { MULTIQC ; MOSDEPTH ; PICARD_WGS_METRICS  } from "./modules/qc/main.nf"
 include { VCF_STATS } from "./modules/vcf/main.nf"
 include { VEP } from "./modules/vep/main.nf"
+include { BAM_SELECT_READS } from "./modules/samtools/main.nf"
+include { MANTA } from "./modules/sv/main"
+include { BED_COMPRESS_AND_INDEX } from "./modules/htslib/main.nf"
+include { PBSV_SIG; PBSV_CALL } from "./modules/sv/main.nf"
 
 // Initialize channels
 Channel
@@ -92,32 +100,80 @@ gzi = Channel
 
 // The main pipeline logic
 
+ch_vcf = Channel.from([])
+ch_bam = Channel.from([])
+
 workflow {
 
 	main:
 
+	
 	if (params.pacbio) {
-		DEEPVARIANT_PACBIO(reads,bed,tandem_repeats,fastaGz,gzFai,gzi,fai)
-		bam = DEEPVARIANT_PACBIO.out.bam
-		vcf = DEEPVARIANT_PACBIO.out.vcf
-		gvcf = DEEPVARIANT_PACBIO.out.gvcf
-		vcf_dv = DEEPVARIANT_PACBIO.out.vcf_dv
+
+		PB_ALIGN(reads)
+                ch_bam = ch_bam.mix(PB_ALIGN.out.bam)
+
+		if ('deepvariant' in tools) {
+			DEEPVARIANT_LONG_READS(
+				ch_bam,
+				bed,
+				fastaGz,
+				gzFai,
+				gzi,
+				fai
+			)
+		}
+		if ('pbsv' in tools) {
+			PBSV_SIG(
+                	        ch_bam,
+                        	tandem_repeats.collect()		
+	                )
+        	        PBSV_CALL(PBSV_SIG.out[1].collect())
+		}
+
+		ch_vcf = ch_vcf.mix(DEEPVARIANT_LONG_READS.out.vcf)
+
 	} else {
-		DEEPVARIANT_SHORT_READS(reads,bed,fastaGz,gzFai,gzi,fai)
-		bam = DEEPVARIANT_SHORT_READS.out.bam
-		vcf = DEEPVARIANT_SHORT_READS.out.vcf
-		gvcf = DEEPVARIANT_SHORT_READS.out.gvcf
-		vcf_dv = DEEPVARIANT_SHORT_READS.out.vcf_dv
+
+		TRIM_AND_ALIGN(reads,bed)
+		ch_bam = ch_bam.mix(TRIM_AND_ALIGN.out.bam)
+
+		if ('intersect' in tools) {
+			BAM_SELECT_READS(
+				TRIM_AND_ALIGN.out.bam,
+				bed.collect()
+			)
+		}
+
+		if ('deepvariant' in tools) {
+			DEEPVARIANT_SHORT_READS(
+				TRIM_AND_ALIGN.out.bam,
+				bed,
+				fastaGz,
+				gzFai,
+				gzi,
+				fai
+			)
+			ch_vcf = ch_vcf.mix(DEEPVARIANT_SHORT_READS.out.vcf)
+		}
+
+		if ('manta' in tools) {
+			BED_COMPRESS_AND_INDEX(bed)
+			MANTA(
+				ch_bam,
+				BED_COMPRESS_AND_INDEX.out.bed.collect()
+			)
+		}
 	}
 
 	// effect prediction
-	if (params.vep) {
-		VEP(vcf)
+	if ('vep' in tools) {
+		VEP(ch_vcf)
 	}
 
-	MOSDEPTH(bam,bed.collect())
-	PICARD_WGS_METRICS(bam,bed.collect())
-	VCF_STATS(vcf)
+	MOSDEPTH(ch_bam,bed.collect())
+	PICARD_WGS_METRICS(ch_bam,bed.collect())
+	VCF_STATS(ch_vcf)
 
 	MULTIQC(
 		MOSDEPTH.out.mix(

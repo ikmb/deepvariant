@@ -10,6 +10,26 @@ To run the pipeline, a typical command will looks as follows:
 
 These options are further explained in the following:
 
+### Analytical options
+
+#### `--tools`
+
+The pipeline supports different tool chains, depending on input. These can be specified as comma-separated list, for example:
+
+Short reads: `--tools Deepvariant,Manta,Vep` will perform read alignments, SNP/Indel as well as SV calling and finally run the variant effect predictor on the SNP/INDEL set(s).
+
+Long reads: `--tools Deepvariant,PBS` will perform read alignments and SNP/Indel as well as SV calling.
+
+Providing no tools will only perform alignment and deduplication of alignments. 
+
+All options:
+
+* Deepvariant - perform variant calling (long- and short reads)
+* PBSV - perform SV calling (long reads)
+* Manta - perform SV calling (short reads)
+* VEP - perform variant effect prediction (long- and short reads, requires Deepvariant)
+* Intersect - create a set of FastQ files that only include those reads overlapping --intervals (or the built-in calling regions)
+
 ### Sequencing setup(s)
 
 WGS data is often produced in multiple sequencing runs or across multiple lanes. This pipeline will automatically deal with such situations by using the sampleID as a grouping variable. Please do not
@@ -53,7 +73,7 @@ The name of the genome assembly version to use. Allowed options are:
 * GRCh37 (1000Genomes reference with decoys)
 * GRCh38 (DEFUNCT: human genome WITHOUT alt contigs, as recommended by Heng Li)
 * GRCh38_p14 (Current human reference genome recommended for variant analysis)
-* hg38 (DEFUNCT: human genome with all alt contigs, as distributed by the BROAD)
+* hg38 (the Wittig reference, p13 with only the primary chromosomes and no unplaced contigs etc)
 
 For Illumina input, please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These were manually curated to exclude regions that cannot be reliably called with short read data.
 
@@ -64,3 +84,4 @@ A BED file with calling regions; otherwise the whole-genome calling region set f
 #### `--phase`
 
 Enable phasing for short-read data (phasing is performed by default for Pacbio data)
+
