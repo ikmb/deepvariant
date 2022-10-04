@@ -11,7 +11,7 @@ workflow TRIM_AND_ALIGN {
 	main:
 		
 		FASTP(reads)
-		BWA(FASTP.out.reads,bed.collect())
+		BWA(FASTP.out.reads)
 		SAMTOOLS_MERGE_AND_DEDUP(
 			BWA.out.bam.map { m,b ->
 				def new_meta = [:]
