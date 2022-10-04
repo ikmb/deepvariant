@@ -4,7 +4,6 @@ process BWA {
 
         input:
         tuple val(meta),path(fastqR1),path(fastqR2)
-	path(bed)
 
         output:
         tuple val(meta), file(bam), emit: bam
@@ -12,9 +11,6 @@ process BWA {
 
         script:
         bam = meta.patient_id + "_" + meta.sample_id + "." + meta.library_id + "_" + meta.readgroup_id + ".aligned.cram"
-
-	def options = ""
-	options = " | samtools view -h -L $bed -f 4 - - \\"
 
         """
                 bwa-mem2 mem -K 1000000 -H $params.dict -M -R "@RG\\tID:${meta.readgroup_id}\\tPL:ILLUMINA\\tPU:${meta.platform_unit}\\tSM:${meta.patient_id}_${meta.sample_id}\\PL:ILLUMINA\\tLB:${meta.library_id}\\tDS:${params.fasta}\\tCN:CCGA" \

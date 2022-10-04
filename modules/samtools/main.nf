@@ -16,8 +16,8 @@ process BAM_SELECT_READS {
 	R2 = bam.getBaseName() + "_R2_001.fastq.gz"
 
 	"""
-		samtools view -hb -o mapped.bam -L $bed $bam
-		samtools view -hb -o unmapped.bam -f 4 $bam
+		samtools view --reference $params.fasta -hb -o mapped.bam -L $bed $bam
+		samtools view --reference $params.fasta -hb -o unmapped.bam -f 4 $bam
 		samtools merge merged.bam mapped.bam unmapped.bam
 		samtools collate merged.bam -u -O merged.bam | samtools fastq -1 $R1 -2 $R2 -0 /dev/null -s /dev/null -n
 		rm *mapped.bam merged.bam
