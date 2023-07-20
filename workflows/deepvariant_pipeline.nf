@@ -110,7 +110,7 @@ workflow DEEPVARIANT_PIPELINE {
         if ('intersect' in tools) {
             BAM_SELECT_READS(
                 TRIM_AND_ALIGN.out.bam,
-                ch_bed,
+                ch_bed.collect(),
                 ch_fasta
             )
 
@@ -121,7 +121,7 @@ workflow DEEPVARIANT_PIPELINE {
         if ('deepvariant' in tools) {
             DEEPVARIANT_SHORT_READS(
                 TRIM_AND_ALIGN.out.bam,
-                ch_bed,
+                ch_bed.collect(),
                 ch_fasta
             )
             ch_vcf = ch_vcf.mix(DEEPVARIANT_SHORT_READS.out.vcf)
@@ -139,7 +139,7 @@ workflow DEEPVARIANT_PIPELINE {
             MANTA(
                 ch_bam,
                 BED_COMPRESS_AND_INDEX.out.bed.collect(),
-                ch_fasta
+                ch_fasta.collect()
             )
 
             ch_versions = ch_versions.mix(MANTA.out.versions)
@@ -150,13 +150,13 @@ workflow DEEPVARIANT_PIPELINE {
     MOSDEPTH(
         ch_bam,
         ch_fasta,
-        ch_bed
+        ch_bed.collect()
     )
     
     PICARD_WGS_METRICS(
         ch_bam,
         ch_fasta,
-        ch_bed
+        ch_bed.collect()
     )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
