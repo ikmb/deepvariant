@@ -1,53 +1,57 @@
 process DEEPVARIANT {
 
-	tag "${meta.patient_id}|${meta.sample_id}"
+    tag "${meta.patient_id}|${meta.sample_id}"
 
-        publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/DeepVariant", mode: 'copy'
+    container "docker://google/deepvariant:1.5.0"
 
-        label 'deepvariant'
+    publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/DeepVariant", mode: 'copy'
 
-        scratch true
+    label 'long_parallel'
 
-        input:
-        tuple val(meta), path(bam),path(bai)
-        path(bed)
-	path(fastaGz)
-	path(gzFai)
-	path(gzi)
-	path(fai)
+    scratch true
 
-        output:
-        tuple val(meta),path(gvcf), emit: gvcf
-        tuple val(meta),path(vcf), emit: vcf
-	val(meta), emit: sample
+    input:
+    tuple val(meta), path(bam),path(bai)
+    path(bed)
+    tuple path(fasta),path(fai),path(dict)
 
-        script:
-        gvcf = bam.getBaseName() + ".g.vcf.gz"
-        vcf = bam.getBaseName() + ".vcf.gz"
+    output:
+    tuple val(meta),path(gvcf), emit: gvcf
+    tuple val(meta),path(vcf), emit: vcf
+    val(meta), emit: sample
+    path("versions.yml"), emit: versions
 
-	def model = "WGS"
-	def options = ""
-	if (params.pacbio) {
-		model = "PACBIO"
-		if (params.intervals) {
-			options = "--regions=${bed}"
-		}
-	} else {
-		options = "--regions=${bed}"
-	}
-        """
-		set TMPDIR=\$PWD
+    script:
+    gvcf = bam.getBaseName() + ".g.vcf.gz"
+    vcf = bam.getBaseName() + ".vcf.gz"
 
-                /opt/deepvariant/bin/run_deepvariant \
-                --model_type=${model} \
-                --ref=$fastaGz \
-                --reads $bam \
-                --output_vcf=$vcf \
-                --output_gvcf=$gvcf \
-                $options \
-                --num_shards=${task.cpus} \
-		--intermediate_results_dir tmp_data
+    def model = "WGS"
+    def options = ""
+    if (params.pacbio) {
+        model = "PACBIO"
+        if (params.intervals) {
+            options = "--regions=${bed}"
+        }
+    } else {
+        options = "--regions=${bed}"
+    }
+    """
+    set TMPDIR=\$PWD
 
-        """
+    /opt/deepvariant/bin/run_deepvariant \
+    --model_type=${model} \
+    --ref=$fasta \
+    --reads $bam \
+    --output_vcf=$vcf \
+    --output_gvcf=$gvcf \
+    $options \
+    --num_shards=${task.cpus} \
+    --intermediate_results_dir tmp_data
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        deepvariant: \$(echo \$(/opt/deepvariant/bin/run_deepvariant --version) | sed 's/^.*version //; s/ .*\$//' )
+    END_VERSIONS
+    """
 }
 

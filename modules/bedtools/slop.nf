@@ -1,18 +1,27 @@
 process BEDTOOLS_SLOP {
 
-	label 'bedtools'
+    tag "${b}"
 
-	input:
-	path(bed)
+    container 'quay.io/biocontainers/bedtools:2.23.0--h5b5514e_6'
 
-	output:
-	path(bed_padded), emit: bed
+    input:
+    path(b)
+    val(padding)
+    tuple path(fasta),path(fai),path(dict)
 
-	script:
-	bed_padded = bed.getBaseName() + ".padded.bed"
+    output:
+    path(bed_padded), emit: bed
+    path("versions.yml"), emit: versions
 
-	"""
-		bedtools slop -b 10 -g $params.fasta -i $bed > $bed_padded
-	"""
+    script:
+    bed_padded = b.getBaseName() + ".padded.bed"
 
+    """
+    bedtools slop -i $b -g $fai -b $padding > $bed_padded
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        bedtools: \$( bedtools -version | head -n1 | sed -e "s/bedtools v//g" )
+    END_VERSIONS
+    """
 }
