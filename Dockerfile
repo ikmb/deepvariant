@@ -4,5 +4,5 @@ LABEL authors="Marc Hoeppner" \
 
 COPY environment.yml /
 RUN conda env create -f /environment.yml && conda clean -a
-ENV PATH /opt/conda/envs/deepvariant-1.3/bin:$PATH
+ENV PATH /opt/conda/envs/deepvariant-1.6/bin:$PATH
 

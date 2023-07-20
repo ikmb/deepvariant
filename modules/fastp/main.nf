@@ -1,25 +1,32 @@
 process FASTP {
 
-	tag "${meta.patient_id}|${meta.sample_id}|${meta.readgroup_id}"
+    container 'quay.io/biocontainers/fastp:0.23.2--h79da9fb_0'
 
-	label 'fastp'
+    label 'medium_parallel'
 
-        input:
-        tuple val(meta), path(fastqR1), path(fastqR2)
+    tag "${meta.patient_id}|${meta.sample_id}"
 
-        output:
-        tuple val(meta),file(left),file(right), emit: reads
-        tuple path(json),path(html), emit: qc
+    input:
+    tuple val(meta), path(fastqR1), path(fastqR2)
 
-        script:
-        left = file(fastqR1).getBaseName() + ".trimmed.fastq.gz"
-        right = file(fastqR2).getBaseName() + ".trimmed.fastq.gz"
-        json = meta.patient_id + "_" + meta.sample_id + "_" + meta.library_id + "-" + meta.readgroup_id + ".fastp.json"
-	html = meta.patient_id + "_" + meta.sample_id + "_" + meta.library_id + "-" + meta.readgroup_id + ".fastp.html"
+    output:
+    tuple val(meta),path(left),path(right), emit: reads
+    path(json), emit: json
+    path("versions.yml"), emit: versions
 
-        """
-                fastp --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html
-        """
+    script:
 
+    left = file(fastqR1).getBaseName() + "_trimmed.fastq.gz"
+    right = file(fastqR2).getBaseName() + "_trimmed.fastq.gz"
+    json = file(fastqR1).getBaseName() + ".fastp.json"
+    html = file(fastqR1).getBaseName() + ".fastp.html"
+    
+    """
+    fastp -c --in1 $fastqR1 --in2 $fastqR2 --out1 $left --out2 $right --detect_adapter_for_pe -w ${task.cpus} -j $json -h $html --length_required 35
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        fastp: \$(fastp --version 2>&1 | sed -e "s/fastp //g")
+    END_VERSIONS
+    """
 }
-
