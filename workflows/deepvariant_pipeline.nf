@@ -139,7 +139,7 @@ workflow DEEPVARIANT_PIPELINE {
             MANTA(
                 ch_bam,
                 BED_COMPRESS_AND_INDEX.out.bed.collect(),
-                ch_fasta.collect()
+                ch_fasta
             )
 
             ch_versions = ch_versions.mix(MANTA.out.versions)
@@ -176,16 +176,14 @@ workflow DEEPVARIANT_PIPELINE {
 
 def create_fastq_channel(LinkedHashMap row) {
 
-    // IndivID;SampleID;libraryID;rgID;rgPU;platform;platform_model;Center;Date;R1;R2
+    // patient;sample;library;rgid;rgpu;R1;R2
 
     def meta = [:]
-    meta.patient_id = row.IndivID
-    meta.sample_id = row.SampleID
-    meta.library_id = row.libraryID
-    meta.readgroup_id = row.rgID
-    meta.center = row.Center
-    meta.date = row.Date
-    meta.platform_unit = row.rgPU
+    meta.patient_id = row.patient
+    meta.sample_id = row.sample
+    meta.library_id = row.library
+    meta.readgroup_id = row.rgid
+    meta.platform_unit = row.rgpu
 
     def array = []
     array = [ meta, file(row.R1), file(row.R2) ]
@@ -195,11 +193,11 @@ def create_fastq_channel(LinkedHashMap row) {
 
 def create_pacbio_channel(LinkedHashMap row) {
 
-    // IndivID;SampleID;libraryID;rgID;rgPU;platform;platform_model;Center;Date;R1;R2
+    // patient;sample;R1
 
     def meta = [:]
-    meta.patient_id = row.IndivID
-    meta.sample_id = row.SampleID
+    meta.patient_id = row.patient
+    meta.sample_id = row.sample
 
     def array = []
     array = [ meta, file(row.R1) ]

@@ -18,8 +18,8 @@ process BAM_SELECT_READS {
     path("versions.yml"), emit: versions
 
     script:
-    R1 = bam.getBaseName() + "_R1_001.fastq.gz"
-    R2 = bam.getBaseName() + "_R2_001.fastq.gz"
+    R1 = meta.sample_id + "_R1_001.fastq.gz"
+    R2 = meta.sample_id + "_R2_001.fastq.gz"
 
     """
     samtools view --reference $fasta -hb -o mapped.cram -L $bed $bam

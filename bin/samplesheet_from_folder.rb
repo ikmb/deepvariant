@@ -36,6 +36,7 @@ opts.on("-f","--folder", "=FOLDER","Folder to scan") {|argument| options.folder 
 opts.on("-p", "--[no-]pacbio [FLAG]", TrueClass, "Pacbio data") {|argument| options.pacbio = argument.nil? ? true : argument }
 opts.on("-c","--centre", "=CENTRE","Name of sequencing centre") {|argument| options.centre = argument }
 opts.on("-s","--platform","=PLATFORM", "Name of the sequencing platform") {|argument| options.platform = argument }
+opts.on("-l","--lookup", "=LOOKUP", "Lookup file with lib id <> other id") {|argument| options.lookup = argument }
 opts.on("-h","--help","Display the usage information") {
  puts opts
  exit
@@ -49,12 +50,19 @@ date = Time.now.strftime("%Y-%m-%d")
 options.centre ? center = options.centre : center = "IKMB"
 options.platform ? platform = options.platform : platform = "NovaSeq6000"
 
+lookup = {}
+if options.lookup
+	IO.readlines(options.lookup).each do |line|
+		key,value = line.strip.split("\t")
+		lookup[key] = value
+	end
+end
 
 if options.pacbio
 
 	fastq_files = Dir["#{options.folder}/*.fastq.gz"]
 
-	puts "IndivID;SampleID;R1"
+	puts "patient;sample;R1"
 
 	fastq_files.each do |file|
 
@@ -72,27 +80,33 @@ else
 
 	groups = fastq_files.group_by{|f| f.split("/")[-1].split(/_R[1,2]/)[0] }
 
-	puts "IndivID;SampleID;libraryID;rgID;rgPU;R1;R2"
+	puts "patient;sample;library;rgid;rgpu;R1;R2"
 
 	groups.each do |group, files|
 
-        	left,right = files.sort.collect{|f| File.absolute_path(f)}
+            left,right = files.sort.collect{|f| File.absolute_path(f)}
 
-	        library = group.split("_L00")[0]
-        	sample = group.split("_L00")[0]
+            abort "Missing one member of the pair for #{group}" unless left && right
 
-	        e = `zcat #{left} | head -n1 `
-		e.gsub!("@", "")
-		header = e
+            library = group.split("_")[1]
+            sample = library
 
-        	instrument,run_id,flowcell_id,lane,tile,x,y = header.split(" ")[0].split(":")
+            if lookup.has_key?(library)
+                sample = "#{lookup[library]}"
+            end
 
-		index = header.split(" ")[-1].split(":")[-1]
-        	readgroup = flowcell_id + "." + lane + "." + library 
+            e = `zcat #{left} | head -n1 `
+            e.gsub!("@", "")
+            header = e
 
-	        pgu = flowcell_id + "." + lane + "." + index
+            instrument,run_id,flowcell_id,lane,tile,x,y = header.split(" ")[0].split(":")
 
-        	puts "#{sample};Sample_#{sample};#{library};#{readgroup};#{pgu};#{left};#{right}"
+            index = header.split(" ")[-1].split(":")[-1]
+            readgroup = flowcell_id + "." + lane + "." + library 
+
+            pgu = flowcell_id + "." + lane + "." + index
+
+            puts "#{sample};#{sample};#{library};#{readgroup};#{pgu};#{left};#{right}"
 
 	end
 
