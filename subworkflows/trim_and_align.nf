@@ -35,9 +35,8 @@ workflow TRIM_AND_ALIGN {
             new_meta = [:]
             new_meta.patient_id = meta.patient_id
             new_meta.sample_id = meta.sample_id
-            def groupKey = meta.sample_id
-            tuple( groupKey, new_meta, bam)
-        }.groupTuple(by: [0,1]).map { g ,new_meta ,bam -> [ new_meta, bam ] }
+            tuple( new_meta, bam)
+        }.groupTuple()
             
         bam_mapped.branch {
             single:   it[1].size() == 1
@@ -60,7 +59,7 @@ workflow TRIM_AND_ALIGN {
 			SAMTOOLS_INDEX.out.bam,
 			ch_fasta
 		)
-
+		
 		ch_versions = ch_versions.mix(SAMTOOLS_MARKDUP.out.versions)
 
 	emit:

@@ -3,7 +3,7 @@ process PICARD_WGS_METRICS {
 
     tag "${meta.patient_id}|${meta.sample_id}"
 
-    publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}", mode: 'copy'
+    publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/QC", mode: 'copy'
 
     container "docker://quay.io/biocontainers/picard:2.26.11--hdfd78af_0"
 
