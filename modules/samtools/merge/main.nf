@@ -15,8 +15,7 @@ process SAMTOOLS_MERGE {
     path("versions.yml"), emit: versions
 
     script:
-    merged_bam = meta.patient_id + "_" + meta.sample_id + "-merged.bam"
-    merged_bam_index = merged_bam + ".bai"
+    merged_bam = meta.patient_id + "_" + meta.sample_id + "-merged.cram"
     
     """
     samtools merge -@ 4 $merged_bam ${aligned_bam_list.join(' ')}
