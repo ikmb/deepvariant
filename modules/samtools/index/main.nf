@@ -12,6 +12,7 @@ process SAMTOOLS_INDEX {
     path("versions.yml"), emit: versions
 
     script:
+    
     bam_index = bam.getName() + ".crai"
 
     """
