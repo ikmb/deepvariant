@@ -22,7 +22,7 @@ workflow DEEPVARIANT_SHORT_READS {
         DEEPVARIANT.out.vcf
     )
     
-    ch_vcfs = ch_vcf.mix(TABIX.out.vcf)
+    ch_vcfs = ch_vcfs.mix(TABIX.out.vcf)
 
     emit:
     gvcf = DEEPVARIANT.out.gvcf

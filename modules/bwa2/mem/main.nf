@@ -22,7 +22,7 @@ process BWA2_MEM {
     sample = meta.sample_id
 
     """
-    bwa-mem2 mem -K 1000000 -H ${dict} -M -R "@RG\\tID:${meta.readgroup_id}\\tPL:ILLUMINA\\tPU:${meta.platform_unit}\\tSM:${meta.sample_id}\\tLB:${meta.library_id}\\tDS:${bwa_index}\\tCN:${meta.center}" \
+    bwa-mem2 mem -K 1000000 -H ${dict} -M -R "@RG\\tID:${meta.readgroup_id}\\tPL:ILLUMINA\\tPU:${meta.platform_unit}\\tSM:${meta.sample_id}\\tLB:${meta.library_id}\\tDS:${bwa_index}\\tCN:CCGA" \
     -t ${task.cpus} ${bwa_index} $left $right \
     | samtools fixmate -@ ${task.cpus} -m - - \
     | samtools sort --reference $fasta -@ ${task.cpus} -m 2G -O CRAM -o $bam - 
