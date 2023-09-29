@@ -18,7 +18,7 @@ The pipeline supports different tool chains, depending on input. These can be sp
 
 Short reads: `--tools Deepvariant,Manta,Vep` will perform read alignments, SNP/Indel as well as SV calling and finally run the variant effect predictor on the SNP/INDEL set(s).
 
-Long reads: `--tools Deepvariant,PBS` will perform read alignments and SNP/Indel as well as SV calling.
+Long reads: `--tools Deepvariant,PBSV` will perform read alignments and SNP/Indel as well as SV calling.
 
 Providing no tools will only perform alignment and deduplication of alignments. 
 
@@ -74,8 +74,9 @@ The name of the genome assembly version to use. Allowed options are:
 * GRCh38 (DEFUNCT: human genome WITHOUT alt contigs, as recommended by Heng Li)
 * GRCh38_p14 (Current human reference genome recommended for variant analysis)
 * hg38 (the Wittig reference, p13 with only the primary chromosomes and no unplaced contigs etc)
+* CHM13v2 (the telomere-to-telomere reference with fully assembled Y chromosome)
 
-For Illumina input, please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These were manually curated to exclude regions that cannot be reliably called with short read data.
+For Illumina input, please note that all assemblies come with pre-defined calling regions, as provided by the BROAD institute. These were manually curated to exclude regions that cannot be reliably called with short read data. The only exception is the CHM13v2 assembly, for which no such regions are currently available - so run times might be a bit increased. 
 
 #### `--intervals`
 
