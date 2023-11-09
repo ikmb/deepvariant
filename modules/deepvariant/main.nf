@@ -33,9 +33,9 @@ process DEEPVARIANT {
             options = "--regions=${bed}"
         }
     } else {
-        if (bed)
+        if (bed) {
             options = "--regions=${bed}"
-        end
+        }
     }
     """
     set TMPDIR=\$PWD
