@@ -40,7 +40,7 @@ process DEEPVARIANT {
 
     // Deepvariant needs some special settings to work with VG inputs    
     if (params.short_read_aligner == "vg") {
-    	options += "--make_examples_extra_args=\"min_mapping_quality=1,keep_legacy_allele_counter_behavior=true,normalize_reads=true\""
+        options += "--make_examples_extra_args=\"min_mapping_quality=1,keep_legacy_allele_counter_behavior=true,normalize_reads=true\""
     }
     
     """

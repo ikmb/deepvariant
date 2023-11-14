@@ -2,7 +2,7 @@ process VG_GIRAFFE {
 
     container 'quay.io/biocontainers/vg:1.52.0--h9ee0642_0'
 
-    publishDir "${params.outdir}/${params.patient_id}/${param.sample_id}/VG", mode: 'copy'
+    publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/VG", mode: 'copy'
 
     label 'long_parallel'
 

@@ -23,24 +23,24 @@ Which aligner to use for short read data (for Pacbio, the choice is automaticall
 
 The pipeline supports different tool chains, depending on input. These can be specified as comma-separated list, for example:
 
-Short reads: `--tools Deepvariant,Manta,Vep` will perform read alignments, SNP/Indel as well as SV calling and finally run the variant effect predictor on the SNP/INDEL set(s).
+Short reads: `--tools deepvariant,manta,vep` will perform read alignments, SNP/Indel as well as SV calling and finally run the variant effect predictor on the SNP/INDEL set(s).
 
-Long reads: `--tools Deepvariant,PBSV` will perform read alignments and SNP/Indel as well as SV calling.
+Long reads: `--tools deepvariant,pbsv` will perform read alignments and SNP/Indel as well as SV calling.
 
 Providing no tools will only perform alignment and deduplication of alignments. 
 
 All options:
 
-* [Deepvariant](https://github.com/google/deepvariant) - perform variant calling using Google Deepvariant (long- and short reads)
-* [PBSV](https://github.com/PacificBiosciences/pbsv) - perform SV calling (long reads)
-* [Manta](https://github.com/Illumina/manta) - perform SV calling (short reads)
-* [VEP](https://www.ensembl.org/info/docs/tools/vep/index.html) - perform variant effect prediction (long- and short reads, requires Deepvariant)
-* Intersect - create a set of FastQ files that only include those reads overlapping --intervals (or the built-in calling regions)
+* [deepvariant](https://github.com/google/deepvariant) - perform variant calling using Google Deepvariant (long- and short reads)
+* [pbsv](https://github.com/PacificBiosciences/pbsv) - perform SV calling (long reads)
+* [manta](https://github.com/Illumina/manta) - perform SV calling (short reads)
+* [vep](https://www.ensembl.org/info/docs/tools/vep/index.html) - perform variant effect prediction (long- and short reads, requires Deepvariant)
+* intersect - create a set of FastQ files that only include those reads overlapping --intervals (or the built-in calling regions)
 
 ### Sequencing setup(s)
 
 WGS data is often produced in multiple sequencing runs or across multiple lanes. This pipeline will automatically deal with such situations by using the sampleID as a grouping variable. Please do not
-concatenate your reads beforehand ; just ensure that data belonging to the same biological sample are grouped under the same id. 
+concatenate your reads beforehand ; just ensure that data belonging to the same biological sample are grouped under the same SampleID. 
 
 ### Options
 
@@ -77,7 +77,7 @@ Specifies that the input data are pacbio CCS reads. This triggers an alternative
 #### `--genome`
 The name of the genome assembly version to use. Allowed options are:
 
-* GRCh38 (DEFUNCT: human genome WITHOUT alt contigs, as recommended by Heng Li)
+* GRCh38 (original release of hg38 WITHOUT alt contigs, as recommended by Heng Li)
 * GRCh38_p14 (Current human reference genome recommended for variant analysis)
 * hg38 (the Wittig reference, p13 with only the primary chromosomes and no unplaced contigs etc)
 * CHM13v2 (the telomere-to-telomere reference with fully assembled Y chromosome)
@@ -88,7 +88,6 @@ For Illumina input, please note that all assemblies come with pre-defined callin
 
 A BED file with calling regions; otherwise the whole-genome calling region set from BROAD will be used. 
 
-#### `--phase`
+### `--joint_calling` [ default = false ]
 
-Enable phasing for short-read data (phasing is performed by default for Pacbio data)
-
+Perform joint calling of samples (short-read data only at this time)
