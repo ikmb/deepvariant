@@ -9,9 +9,9 @@ ch_fasta    = Channel.fromList( [ file(fasta , checkIfExists: true), file(fai, c
 bwa2_index  = params.genomes[params.assembly].bwa2_index
 mmi_index   = params.genomes[params.assembly].mmi
 
-bed          = params.intervals ?: params.genomes[params.assembly].bed
+ch_bed      = params.intervals ? Channel.fromPath(params.intervals).collect() : Channel.fromPath(params.genomes[params.assembly].bed).collect()
 
-tools = params.tools ? params.tools.split(',').collect{it.trim().toLowerCase().replaceAll('-', '').replaceAll('_', '')} : []
+tools       = params.tools ? params.tools.split(',').collect{it.trim().toLowerCase().replaceAll('-', '').replaceAll('_', '')} : []
 
 // Make sure this assembly as a configured graph reference
 if (params.short_read_aligner == "vg" ) {
@@ -31,6 +31,7 @@ if (params.short_read_aligner == "vg" ) {
     vg_path = null
 }
 
+// Data is from Pacbio long reads
 if (params.pacbio) {
 
     params.dv_model = "PACBIO"
@@ -44,6 +45,7 @@ if (params.pacbio) {
         .ifEmpty { exit 1; "Missing tandem repeats for pacbio SV calling..." }
         .set { tandem_repeats }
 
+// Data is from regular paired-end short reads
 } else {
 
     params.dv_model = "WGS"
@@ -71,12 +73,7 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS }                 from "./../modules/custo
 include { FASTP }				                        from "./../modules/fastp/main"
 include { VG }                                          from "../subworkflows/vg"
 
-// Initialize channels
-Channel
-    .fromPath(bed)
-    .ifEmpty {exit 1; "Could not find the BED file"}
-    .set { ch_bed }.collect()
-
+// Set default channels
 ch_vcf      = Channel.from([])
 ch_bam      = Channel.from([])
 ch_versions = Channel.from([])
@@ -86,6 +83,7 @@ workflow DEEPVARIANT_PIPELINE {
 
     main:
 
+    // Call variants from Pacbio long reads
     if (params.pacbio) {
 
         PB_ALIGN(
@@ -117,15 +115,18 @@ workflow DEEPVARIANT_PIPELINE {
 
         ch_vcf = ch_vcf.mix(DEEPVARIANT_LONG_READS.out.vcf)
 
+    // Short-read workflow
     } else {
 
+        // Trim reads
         FASTP(
             reads
         )
 
-	ch_versions = ch_versions.mix(FASTP.out.versions)
-	ch_reports = ch_reports.mix(FASTP.out.json)
+        ch_versions = ch_versions.mix(FASTP.out.versions)
+        ch_reports = ch_reports.mix(FASTP.out.json)
 
+        // Align with VG
         if (params.short_read_aligner == "vg") {
             VG(
                 FASTP.out.reads,
@@ -136,9 +137,7 @@ workflow DEEPVARIANT_PIPELINE {
             ch_versions = ch_versions.mix(VG.out.versions)
             ch_reports  = ch_reports.mix(VG.out.stats)
             ch_bam = ch_bam.mix(VG.out.bam)
-        }
-
-        if (params.short_read_aligner == "bwa2" ) {
+        } else if (params.short_read_aligner == "bwa2" ) {
             BWA2_ALIGN(
                 FASTP.out.reads,
                 bwa2_index,
@@ -149,6 +148,7 @@ workflow DEEPVARIANT_PIPELINE {
             ch_bam = ch_bam.mix(BWA2_ALIGN.out.bam)
         }
 
+        // Create a BAM file that only covers the regions provided in the BED file (instead of the whole genome)
         if ('intersect' in tools) {
             BAM_SELECT_READS(
                 ch_bam,
@@ -160,6 +160,7 @@ workflow DEEPVARIANT_PIPELINE {
 
         }
 
+        // Call variants using DeepVariant
         if ('deepvariant' in tools) {
             DEEPVARIANT_SHORT_READS(
                 ch_bam,
@@ -171,6 +172,7 @@ workflow DEEPVARIANT_PIPELINE {
             ch_versions = ch_versions.mix(DEEPVARIANT_SHORT_READS.out.versions)
         }
 
+        // Call structural variants using Manta
         if ('manta' in tools) {
             BGZIP_INDEX(
                 ch_bed
@@ -189,12 +191,14 @@ workflow DEEPVARIANT_PIPELINE {
         }
     }
 
+    // Fast WGS Coverage with MosDepth
     MOSDEPTH(
         ch_bam,
         ch_fasta,
         ch_bed.collect()
     )
     
+    // Picard WGS metrics
     PICARD_WGS_METRICS(
         ch_bam,
         ch_fasta,

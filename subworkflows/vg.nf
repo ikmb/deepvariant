@@ -4,6 +4,7 @@ include { VG_GIRAFFE }          from "./../modules/vg/giraffe/main"
 include { SAMTOOLS_MERGE } 		from "./../modules/samtools/merge/main"
 include { SAMTOOLS_INDEX } 		from "./../modules/samtools/index/main"
 include { SAMTOOLS_MARKDUP } 	from "./../modules/samtools/markdup/main"
+include { SAMTOOLS_SORT }       from "./../modules/samtools/sort/main"
 
 ch_versions = Channel.from([])
 
@@ -37,10 +38,13 @@ workflow VG {
     )
 
     ch_versions = ch_versions.mix(VG_GIRAFFE.out.versions)
-
     ch_aligned_bams = VG_GIRAFFE.out.bam
 
-	bam_mapped = ch_aligned_bams.map { meta, bam ->
+    SAMTOOLS_SORT(
+        ch_aligned_bams
+    )
+
+	bam_mapped = SAMTOOLS_SORT.out.bam.map { meta, bam ->
         new_meta = [:]
         new_meta.patient_id = meta.patient_id
         new_meta.sample_id = meta.sample_id

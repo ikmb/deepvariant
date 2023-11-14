@@ -1,8 +1,8 @@
-include { DEEPVARIANT } from "./../modules/deepvariant/main"
-include { TABIX } from "./../modules/htslib/tabix"
-include { GLNEXUS } from "./../modules/glnexus/main"
+include { DEEPVARIANT }     from "./../modules/deepvariant/main"
+include { TABIX }           from "./../modules/htslib/tabix"
+include { GLNEXUS }         from "./../modules/glnexus/main"
 
-ch_vcfs = Channel.from([])
+ch_vcfs     = Channel.from([])
 ch_versions = Channel.from([])
 
 workflow DEEPVARIANT_SHORT_READS {

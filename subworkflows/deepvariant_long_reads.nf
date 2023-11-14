@@ -1,7 +1,9 @@
 include { DEEPVARIANT } from "./../modules/deepvariant/main.nf"
-include { TABIX } from "./../modules/htslib/tabix.nf"
+include { TABIX } 		from "./../modules/htslib/tabix.nf"
+include { GLNEXUS } 	from "./../modules/glnexus/main"
 
 ch_versions = Channel.from([])
+ch_vcfs     = Channel.from([])
 
 workflow DEEPVARIANT_LONG_READS {
 
@@ -25,10 +27,21 @@ workflow DEEPVARIANT_LONG_READS {
 		)
 
 		ch_versions = ch_versions.mix(TABIX.out.versions)
+		ch_vcfs = ch_vcfs.mix(TABIX.out.vcf)
+
+		if (params.joint_calling) {
+            GLNEXUS(
+                DEEPVARIANT.out.gvcf.map { m,g -> g }.collect(),
+                bed
+			)
+
+			ch_versions = ch_versions.mix(GLNEXUS.out.versions)
+			
+		}
 	
 	emit:
 		gvcf = DEEPVARIANT.out.gvcf
-		vcf = TABIX.out.vcf
+		vcf = ch_vcfs
 		versions = ch_versions
 
 }
