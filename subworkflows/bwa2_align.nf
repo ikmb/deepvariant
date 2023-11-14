@@ -1,4 +1,3 @@
-include { FASTP }				from "./../modules/fastp/main"
 include { BWA2_MEM } 			from "./../modules/bwa2/mem/main"
 include { SAMTOOLS_MERGE } 		from "./../modules/samtools/merge/main"
 include { SAMTOOLS_INDEX } 		from "./../modules/samtools/index/main"
@@ -6,7 +5,7 @@ include { SAMTOOLS_MARKDUP } 	from "./../modules/samtools/markdup/main"
 
 ch_versions = Channel.from([])
 
-workflow TRIM_AND_ALIGN {
+workflow BWA2_ALIGN {
 
 	take:
 		reads
@@ -14,15 +13,9 @@ workflow TRIM_AND_ALIGN {
 		ch_fasta
 
 	main:
-		
-		FASTP(
-			reads
-		)
-
-		ch_versions = ch_versions.mix(FASTP.out.versions)
-
+	
 		BWA2_MEM(
-			FASTP.out.reads,
+			reads,
 			ch_fasta,
 			bwa_index
 		)
@@ -56,14 +49,15 @@ workflow TRIM_AND_ALIGN {
 		ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions)
 
         SAMTOOLS_MARKDUP(
-			SAMTOOLS_INDEX.out.bam,
-			ch_fasta
-		)
+            SAMTOOLS_INDEX.out.bam,
+	    ch_fasta
+        )
 		
-		ch_versions = ch_versions.mix(SAMTOOLS_MARKDUP.out.versions)
+	ch_versions = ch_versions.mix(SAMTOOLS_MARKDUP.out.versions)
 
 	emit:
-		bam = SAMTOOLS_MARKDUP.out.bam
-		versions = ch_versions
+	bam = SAMTOOLS_MARKDUP.out.bam
+	versions = ch_versions
+	stats = SAMTOOLS_MARKDUP.out.report
 }
 

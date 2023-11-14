@@ -2,7 +2,7 @@ process DEEPVARIANT {
 
     tag "${meta.patient_id}|${meta.sample_id}"
 
-    container "docker://google/deepvariant:1.5.0"
+    container "docker://google/deepvariant:1.6.0"
 
     publishDir "${params.outdir}/${meta.patient_id}/${meta.sample_id}/DeepVariant", mode: 'copy'
 
@@ -37,6 +37,12 @@ process DEEPVARIANT {
             options = "--regions=${bed}"
         }
     }
+
+    // Deepvariant needs some special settings to work with VG inputs    
+    if (params.short_read_aligner == "vg") {
+    	options += "--make_examples_extra_args=\"min_mapping_quality=1,keep_legacy_allele_counter_behavior=true,normalize_reads=true\""
+    }
+    
     """
     set TMPDIR=\$PWD
 

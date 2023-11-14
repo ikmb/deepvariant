@@ -12,6 +12,13 @@ These options are further explained in the following:
 
 ### Analytical options
 
+#### `--short_read_aligner` [ default = "bwa2"]
+
+Which aligner to use for short read data (for Pacbio, the choice is automatically pbmmi):
+
+* [bwa2](https://github.com/bwa-mem2/bwa-mem2) - the follow-up to BWA, twice as fast and near-identical results
+* [vg](https://github.com/vgteam/vg) - a real graph aligner (uses pre-configured paths depending on --assembly)
+
 #### `--tools`
 
 The pipeline supports different tool chains, depending on input. These can be specified as comma-separated list, for example:
@@ -24,10 +31,10 @@ Providing no tools will only perform alignment and deduplication of alignments.
 
 All options:
 
-* Deepvariant - perform variant calling (long- and short reads)
-* PBSV - perform SV calling (long reads)
-* Manta - perform SV calling (short reads)
-* VEP - perform variant effect prediction (long- and short reads, requires Deepvariant)
+* [Deepvariant](https://github.com/google/deepvariant) - perform variant calling using Google Deepvariant (long- and short reads)
+* [PBSV](https://github.com/PacificBiosciences/pbsv) - perform SV calling (long reads)
+* [Manta](https://github.com/Illumina/manta) - perform SV calling (short reads)
+* [VEP](https://www.ensembl.org/info/docs/tools/vep/index.html) - perform variant effect prediction (long- and short reads, requires Deepvariant)
 * Intersect - create a set of FastQ files that only include those reads overlapping --intervals (or the built-in calling regions)
 
 ### Sequencing setup(s)
@@ -70,7 +77,6 @@ Specifies that the input data are pacbio CCS reads. This triggers an alternative
 #### `--genome`
 The name of the genome assembly version to use. Allowed options are:
 
-* GRCh37 (1000Genomes reference with decoys)
 * GRCh38 (DEFUNCT: human genome WITHOUT alt contigs, as recommended by Heng Li)
 * GRCh38_p14 (Current human reference genome recommended for variant analysis)
 * hg38 (the Wittig reference, p13 with only the primary chromosomes and no unplaced contigs etc)

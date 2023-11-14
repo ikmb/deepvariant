@@ -9,9 +9,27 @@ ch_fasta    = Channel.fromList( [ file(fasta , checkIfExists: true), file(fai, c
 bwa2_index  = params.genomes[params.assembly].bwa2_index
 mmi_index   = params.genomes[params.assembly].mmi
 
-params.bed  = params.intervals ?: params.genomes[params.assembly].bed
+bed          = params.intervals ?: params.genomes[params.assembly].bed
 
 tools = params.tools ? params.tools.split(',').collect{it.trim().toLowerCase().replaceAll('-', '').replaceAll('_', '')} : []
+
+// Make sure this assembly as a configured graph reference
+if (params.short_read_aligner == "vg" ) {
+
+    if (params.genomes[params.assembly].vg_path) {
+        gbz = file(params.genomes["gbz"], checkIfExists: true)
+        hapl = file(params.genomes["hapl"], checkIfExists: true)
+        ch_vg_index = Channel.from([gbz,hapl])
+        vg_path = params.genomes[params.assembly].vg_path
+    } else {
+        log.info "Requested VG aligner, but no graph index is configured!"
+        System.exit(1)
+    }
+
+} else {
+    ch_vg_index = Channel.empty()
+    vg_path = null
+}
 
 if (params.pacbio) {
 
@@ -34,13 +52,14 @@ if (params.pacbio) {
         .splitCsv(sep: ';', header: true)
         .map { create_fastq_channel(it) }
         .set { reads }
+
 }
 
 // Import workflows
 include { DEEPVARIANT_SHORT_READS }                     from "../subworkflows/deepvariant_short_reads"
 include { DEEPVARIANT_LONG_READS }                      from "../subworkflows/deepvariant_long_reads"
 include { PB_ALIGN }                                    from "../subworkflows/pb_align"
-include { TRIM_AND_ALIGN }                              from "../subworkflows/trim_and_align"
+include { BWA2_ALIGN }                                  from "../subworkflows/bwa2_align"
 include { PICARD_WGS_METRICS  }                         from "../modules/picard/collect_wgs_metrics"
 include { MULTIQC }                                     from "../modules/multiqc/main"
 include { MOSDEPTH }                                    from "../modules/mosdepth/main"
@@ -49,16 +68,19 @@ include { MANTA }                                       from "../modules/manta/m
 include { BGZIP_INDEX }                                 from "../modules/htslib/bgzip_index"
 include { PBSV_SIG; PBSV_CALL }                         from "../modules/sv/main"
 include { CUSTOM_DUMPSOFTWAREVERSIONS }                 from "./../modules/custom/dumpsoftwareversions/main"
+include { FASTP }				                        from "./../modules/fastp/main"
+include { VG }                                          from "../subworkflows/vg"
 
 // Initialize channels
 Channel
-    .fromPath(params.bed)
-    .ifEmpty {exit 1; "Could not find a BED file"}
+    .fromPath(bed)
+    .ifEmpty {exit 1; "Could not find the BED file"}
     .set { ch_bed }.collect()
 
 ch_vcf      = Channel.from([])
 ch_bam      = Channel.from([])
 ch_versions = Channel.from([])
+ch_reports  = Channel.from([])
 
 workflow DEEPVARIANT_PIPELINE {
 
@@ -97,19 +119,39 @@ workflow DEEPVARIANT_PIPELINE {
 
     } else {
 
-        TRIM_AND_ALIGN(
-            reads,
-            bwa2_index,
-            ch_fasta
+        FASTP(
+            reads
         )
 
-        ch_versions = ch_versions.mix(TRIM_AND_ALIGN.out.versions)
+	ch_versions = ch_versions.mix(FASTP.out.versions)
+	ch_reports = ch_reports.mix(FASTP.out.json)
 
-        ch_bam = ch_bam.mix(TRIM_AND_ALIGN.out.bam)
+        if (params.short_read_aligner == "vg") {
+            VG(
+                FASTP.out.reads,
+                ch_vg_index,
+                vg_path,
+                ch_fasta
+            )
+            ch_versions = ch_versions.mix(VG.out.versions)
+            ch_reports  = ch_reports.mix(VG.out.stats)
+            ch_bam = ch_bam.mix(VG.out.bam)
+        }
+
+        if (params.short_read_aligner == "bwa2" ) {
+            BWA2_ALIGN(
+                FASTP.out.reads,
+                bwa2_index,
+                ch_fasta
+            )
+            ch_reports  = ch_reports.mix(BWA2_ALIGN.out.stats)
+            ch_versions = ch_versions.mix(BWA2_ALIGN.out.versions)
+            ch_bam = ch_bam.mix(BWA2_ALIGN.out.bam)
+        }
 
         if ('intersect' in tools) {
             BAM_SELECT_READS(
-                TRIM_AND_ALIGN.out.bam,
+                ch_bam,
                 ch_bed.collect(),
                 ch_fasta
             )
@@ -120,7 +162,7 @@ workflow DEEPVARIANT_PIPELINE {
 
         if ('deepvariant' in tools) {
             DEEPVARIANT_SHORT_READS(
-                TRIM_AND_ALIGN.out.bam,
+                ch_bam,
                 ch_bed.collect(),
                 ch_fasta
             )
@@ -158,15 +200,17 @@ workflow DEEPVARIANT_PIPELINE {
         ch_fasta,
         ch_bed.collect()
     )
+    
+    ch_reports = ch_reports.mix(PICARD_WGS_METRICS.out.stats)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml')
     )
 
+    ch_reports = ch_reports.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml)
+    
     MULTIQC(
-        MOSDEPTH.out.mix(
-            PICARD_WGS_METRICS.out,CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml
-        ).collect()
+        ch_reports.collect()
     )
 
     emit:
@@ -186,7 +230,7 @@ def create_fastq_channel(LinkedHashMap row) {
     meta.platform_unit = row.rgpu
 
     def array = []
-    array = [ meta, file(row.R1), file(row.R2) ]
+    array = [ meta, file(row.R1,  checkIfExists: true), file(row.R2, checkIfExists: true) ]
 
     return array
 }
