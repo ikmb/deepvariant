@@ -13,7 +13,8 @@ process SAMTOOLS_INDEX {
 
     script:
     
-    bam_index = bam.getName() + ".crai"
+    extension = bam.getExtension()
+    bam_index =  extension == "bam" ? bam.getName() + ".bai" ? : bam.getName() + ".crai" 
 
     """
     samtools index $bam
