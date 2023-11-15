@@ -9,6 +9,9 @@ include { SAMTOOLS_FIXMATE }    from "./../modules/samtools/fixmate/main"
 
 ch_versions = Channel.from([])
 
+// To Do:
+// Build a new container for VG that includes samtools to run sort and fixmate in one process and avoid
+// that the data touches the harddrive 3 or 4 times for no reason. 
 workflow VG {
 
     take:

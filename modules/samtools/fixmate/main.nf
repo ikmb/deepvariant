@@ -18,7 +18,7 @@ process SAMTOOLS_FIXMATE {
     fixed_bai = fixed_bam + ".bai"
     
     """
-    samtools fixmate -@ ${task.cpus} -m -O bam $b $fixed_bam
+    samtools sort -n $b | samtools fixmate -@ ${task.cpus} -m -O bam - $fixed_bam
     samtools index $fixed_bam
     
     cat <<-END_VERSIONS > versions.yml
