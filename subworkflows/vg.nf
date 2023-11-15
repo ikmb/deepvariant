@@ -5,6 +5,7 @@ include { SAMTOOLS_MERGE } 		from "./../modules/samtools/merge/main"
 include { SAMTOOLS_INDEX } 		from "./../modules/samtools/index/main"
 include { SAMTOOLS_MARKDUP } 	from "./../modules/samtools/markdup/main"
 include { SAMTOOLS_SORT }       from "./../modules/samtools/sort/main"
+include { SAMTOOLS_FIXMATE }    from "./../modules/samtools/fixmate/main"
 
 ch_versions = Channel.from([])
 
@@ -68,12 +69,22 @@ workflow VG {
         SAMTOOLS_MERGE.out.bam.mix( bam_to_merge.single )
     )
     
+    ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions)
+
+    SAMTOOLS_FIXMATE(
+        SAMTOOLS_INDEX.out.bam
+    )
+
+    ch_versions = ch_versions.mix(SAMTOOLS_FIXMATE.out.versions)
+    
     // Perform duplicate marking
     SAMTOOLS_MARKDUP(
-        SAMTOOLS_INDEX.out.bam,
+        SAMTOOLS_FIXMATE.out.bam,
         ch_fasta
     )
-                                                                    
+    
+    ch_versions = ch_versions.mix(SAMTOOLS_MARKDUP.out.versions)
+
     emit:
     bam = SAMTOOLS_MARKDUP.out.bam
     stats = SAMTOOLS_MARKDUP.out.report
